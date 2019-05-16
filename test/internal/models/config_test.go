@@ -35,10 +35,4 @@ func TestGetThrottle(t *testing.T) {
 
 	subject.Throttle = "50s"
 	assert.Equal(t, subject.GetThrottleValue(), 50000)
-
-	subject.Throttle = "1m"
-	assert.Equal(t, subject.GetThrottleValue(), 60000)
-
-	subject.Throttle = "1h"
-	assert.Equal(t, subject.GetThrottleValue(), 60000*60)
 }
