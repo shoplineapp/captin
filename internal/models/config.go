@@ -1,5 +1,11 @@
 package models
 
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+)
+
 // Configuration - Webhook Configuration Model
 type Configuration struct {
 	ConfigID        string   `json:"id"`
@@ -10,4 +16,38 @@ type Configuration struct {
 	Throttle        string   `json:"throttle"`
 	IncludeDocument bool     `json:"include_document"`
 	Name            string   `json:"name"`
+}
+
+// GetThrottleValue - Get Throttle Value in millisecond
+func (c Configuration) GetThrottleValue() int {
+	match := regexp.MustCompile("(\\d+(?:\\.\\d+)?)(s|ms|m|h)")
+	res := match.FindAllStringSubmatch(c.Throttle, -1)
+
+	for i := range res {
+		value, err := strconv.Atoi(res[i][1])
+
+		if err != nil {
+			panic(err)
+		}
+
+		unit := res[i][2]
+
+		switch unit {
+		case "ms":
+			return value
+		case "s":
+			return value * 1000
+		case "m":
+			return value * 1000 * 60
+		case "h":
+			return value * 1000 * 60 * 60
+		default:
+			panic("unrecognized time unit")
+		}
+
+		fmt.Println(res[i][1])
+		fmt.Println(res[i][2])
+	}
+
+	return 0
 }

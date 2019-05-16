@@ -27,3 +27,18 @@ func TestDecodeConfigurationJson(t *testing.T) {
 	assert.Equal(t, subject.Name, "sync_service")
 	assert.Equal(t, subject.IncludeDocument, false)
 }
+
+func TestGetThrottle(t *testing.T) {
+	subject := Configuration{}
+	subject.Throttle = "50ms"
+	assert.Equal(t, subject.GetThrottleValue(), 50)
+
+	subject.Throttle = "50s"
+	assert.Equal(t, subject.GetThrottleValue(), 50000)
+
+	subject.Throttle = "1m"
+	assert.Equal(t, subject.GetThrottleValue(), 60000)
+
+	subject.Throttle = "1h"
+	assert.Equal(t, subject.GetThrottleValue(), 60000*60)
+}
