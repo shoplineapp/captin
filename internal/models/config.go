@@ -19,7 +19,7 @@ type Configuration struct {
 
 // GetThrottleValue - Get Throttle Value in millisecond
 func (c Configuration) GetThrottleValue() int {
-	match := regexp.MustCompile("(\\d+(?:\\.\\d+)?)(s|ms|m|h)")
+	match := regexp.MustCompile("(\\d+(?:\\.\\d+)?)(s|ms)")
 	res := match.FindAllStringSubmatch(c.Throttle, -1)
 
 	for i := range res {
@@ -36,10 +36,6 @@ func (c Configuration) GetThrottleValue() int {
 			return value
 		case "s":
 			return value * 1000
-		case "m":
-			return value * 1000 * 60
-		case "h":
-			return value * 1000 * 60 * 60
 		default:
 			panic("unrecognized time unit")
 		}
