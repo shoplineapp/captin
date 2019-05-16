@@ -1,0 +1,32 @@
+[
+  {
+    "id": "1",
+    "callback_url": "http://callback_url/sync",
+    "validate": "function(obj) { return !!obj.wapos_id }",
+    "throttle": "500ms",
+    "actions": [
+      "product.update",
+      "product.create",
+      "user.create",
+      "user.update",
+      "order.create",
+      "order.update"
+    ],
+    "source": "core-api",
+    "name": "sync_service",
+    "include_document": false
+  },
+  {
+    "id": "2",
+    "callback_url": "http://callback_url_open/sync",
+    "throttle": "500ms",
+    "actions": [
+      "product.update",
+      "product.create",
+      "user.create"
+    ],
+    "source": "open-api",
+    "name": "sync_service",
+    "include_document": false
+  }
+]
