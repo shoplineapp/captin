@@ -5,10 +5,39 @@ agent:
     type: e1-standard-2
     os_image: ubuntu1804
 blocks:
+  - name: "Warm cache"
+    task:
+      prologue:
+        commands:
+          - sem-version go 1.12
+          # Go project boiler plate
+          - export "SEMAPHORE_GIT_DIR=$(go env GOPATH)/src/github.com/${SEMAPHORE_PROJECT_NAME}"
+          - export "PATH=$(go env GOPATH)/bin:${PATH}"
+          - mkdir -vp "${SEMAPHORE_GIT_DIR}" "$(go env GOPATH)/bin"
+          # Dep install db
+          - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+          - checkout
+      jobs:
+        - name: Dep ensure
+          commands:
+            - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum Gopkg.lock),deps-$SEMAPHORE_GIT_BRANCH,deps-master
+            - dep ensure
+            - cache store deps-$SEMAPHORE_GIT_BRANCH-$(checksum Gopkg.lock) vendor
   - name: "Unit tests"
     task:
-      jobs:
-      - name: test
+      prologue:
         commands:
+          - sem-version go 1.12
+          # Go project boiler plate
+          - export "SEMAPHORE_GIT_DIR=$(go env GOPATH)/src/github.com/shoplineapp/${SEMAPHORE_PROJECT_NAME}"
+          - export "PATH=$(go env GOPATH)/bin:${PATH}"
+          - mkdir -vp "${SEMAPHORE_GIT_DIR}" "$(go env GOPATH)/bin"
+          # Dep install db
+          - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
           - checkout
-          - make test
+          - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum Gopkg.lock),deps-$SEMAPHORE_GIT_BRANCH,deps-master
+          - dep ensure
+      jobs:
+        - name: Suite
+          commands:
+            - make test
