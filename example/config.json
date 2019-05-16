@@ -2,7 +2,7 @@
   {
     "id": "1",
     "callback_url": "http://callback_url/sync",
-    "validate": "function(obj) { return !!obj.wapos_id }",
+    "validate": "obj.wapos_id",
     "throttle": "500ms",
     "actions": [
       "product.update",
