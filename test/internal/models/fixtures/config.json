@@ -1,0 +1,10 @@
+{
+  "id": "1234",
+  "callback_url": "http://callback_url/sync",
+  "validate": "function(obj) { return !!obj.wapos_id }",
+  "throttle": "500ms",
+  "actions": ["product.update", "product.create", "user.create", "user.update", "order.create", "order.update"], 
+  "source": "core-api", 
+  "name": "sync_service",
+  "include_document": false
+}
