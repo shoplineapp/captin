@@ -1,3 +1,9 @@
+# Third-Party Libraries
+vendor/
+
+# Build Products
+build/
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
