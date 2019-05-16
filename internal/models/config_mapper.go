@@ -1,5 +1,11 @@
 package models
 
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+)
+
 // ConfigurationMapper - Action to configuration mapper
 type ConfigurationMapper struct {
 	ActionMap map[string][]Configuration
@@ -19,4 +25,19 @@ func NewConfigurationMapper(configs []Configuration) *ConfigurationMapper {
 	}
 
 	return &result
+}
+
+// NewConfigurationMapperFromPath - Read Configuration from path
+func NewConfigurationMapperFromPath(path string) *ConfigurationMapper {
+	data, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		fmt.Println("[Configuration] Failed to load file")
+		panic(err)
+	}
+
+	configs := []Configuration{}
+	json.Unmarshal(data, &configs)
+
+	return NewConfigurationMapper(configs)
 }

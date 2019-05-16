@@ -1,7 +1,6 @@
 package models_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,7 +46,6 @@ func getNames(configs []Configuration) []string {
 
 func TestMapActionToConfig(t *testing.T) {
 	subject := NewConfigurationMapper(setup())
-	fmt.Printf("%+v\n", subject.ActionMap["action:0"])
 
 	action := subject.ActionMap["action:0"]
 	assert.Equal(t, 3, len(action))
@@ -72,4 +70,13 @@ func TestMapActionToConfig(t *testing.T) {
 	names = getNames(action)
 	assert.Contains(t, names, "1")
 	assert.Contains(t, names, "2")
+}
+
+func TestReadLocalFile(t *testing.T) {
+	subject := NewConfigurationMapperFromPath("fixtures/config_list.json")
+	action := subject.ActionMap["product.update"]
+	assert.Equal(t, 2, len(action))
+	names := getNames(action)
+	assert.Contains(t, names, "sync_service")
+	assert.Contains(t, names, "sync_service2")
 }
