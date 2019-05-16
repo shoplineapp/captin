@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 )
@@ -44,9 +43,6 @@ func (c Configuration) GetThrottleValue() int {
 		default:
 			panic("unrecognized time unit")
 		}
-
-		fmt.Println(res[i][1])
-		fmt.Println(res[i][2])
 	}
 
 	return 0
