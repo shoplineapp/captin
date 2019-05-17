@@ -3,7 +3,7 @@ package internal
 import (
 	"fmt"
 	models "github.com/shoplineapp/captin/internal/models"
-	// outgoing "github.com/shoplineapp/captin/internal/outgoing"
+	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 )
 
 type ExecutionError struct {
@@ -23,15 +23,15 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 		return false, &ExecutionError{Cause: "invalid incoming event object"}
 	}
 
-	_ = c.ConfigMap.ConfigsForKey(e.Key)
+	configs := c.ConfigMap.ConfigsForKey(e.Key)
 
-	// _ = []outgoing.Destination{}
+	destinations := []outgoing.Destination{}
 
-	// for _, config := range configs {
-	// 	append(destinations, &outgoing.Destination{config})
-	// }
+	for _, config := range configs {
+		destinations = append(destinations, outgoing.Destination{Config: config})
+	}
 
-	// TODO: Pass event and configs into custom to filter out destinations
+	destinations = outgoing.Custom{}.Sift(outgoing.CustomFilters(e), destinations)
 
 	// TODO: Pass event and destinations into dispatcher
 

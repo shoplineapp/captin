@@ -1,0 +1,20 @@
+package outgoing_filters_test
+
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+
+	helpers "github.com/shoplineapp/captin/internal/helpers"
+	models "github.com/shoplineapp/captin/internal/models"
+	. "github.com/shoplineapp/captin/internal/outgoing/filters"
+)
+
+func TestSourceFilterRunValidate(t *testing.T) {
+	assert.Equal(t, true, helpers.Tuples(SourceFilter{Event: models.IncomingEvent{Source: "service_1"}}.Run(models.Configuration{Source: "service_2"}))[0])
+	assert.Equal(t, false, helpers.Tuples(SourceFilter{Event: models.IncomingEvent{Source: "service_1"}}.Run(models.Configuration{Source: "service_1"}))[0])
+}
+
+func TestSourceFilterApplicable(t *testing.T) {
+	assert.Equal(t, true, SourceFilter{}.Applicable(models.Configuration{AllowLoopback: false}))
+	assert.Equal(t, false, SourceFilter{}.Applicable(models.Configuration{AllowLoopback: true}))
+}
