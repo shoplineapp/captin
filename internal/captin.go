@@ -2,8 +2,9 @@ package internal
 
 import (
 	"fmt"
+
 	models "github.com/shoplineapp/captin/internal/models"
-	// outgoing "github.com/shoplineapp/captin/internal/outgoing"
+	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 )
 
 type ExecutionError struct {
@@ -23,7 +24,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 		return false, &ExecutionError{Cause: "invalid incoming event object"}
 	}
 
-	_ = c.ConfigMap.ConfigsForKey(e.Key)
+	config := c.ConfigMap.ConfigsForKey(e.Key)
 
 	// _ = []outgoing.Destination{}
 
@@ -35,7 +36,9 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 
 	// TODO: Pass event and destinations into dispatcher
 
-	// TODO: return dispatcher instance (?)
+	// Create dispatcher and dispatch events
+	dispatcher := outgoing.NewDispatcherWithConfig(config)
+	dispatcher.Dispatch(e)
 
 	return true, nil
 }
