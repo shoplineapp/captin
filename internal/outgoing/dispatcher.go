@@ -1,29 +1,28 @@
 package outgoing
 
 import (
-	"fmt"
-
 	models "github.com/shoplineapp/captin/internal/models"
+	sender "github.com/shoplineapp/captin/internal/senders"
 )
 
 // Dispatcher - Event Dispatcher
 type Dispatcher struct {
 	callbacks []chan models.IncomingEvent
+	sender    sender.EventSenderInterface
 }
 
 // NewDispatcherWithConfig - Create Outgoing event dispatcher with config
-func NewDispatcherWithConfig(configs []models.Configuration) *Dispatcher {
+func NewDispatcherWithConfig(configs []models.Configuration, sender sender.EventSenderInterface) *Dispatcher {
 	result := Dispatcher{
 		callbacks: []chan models.IncomingEvent{},
+		sender:    sender,
 	}
 
 	for _, config := range configs {
 		ch := make(chan models.IncomingEvent)
 		go func(conf models.Configuration) {
 			evt := <-ch
-			fmt.Println("Configuration: \t\t", conf.Name)
-			fmt.Println("Process Event ID: \t", evt.TargetId)
-			fmt.Println("Process Event Type: \t", evt.TargetType)
+			sender.SendEvent(evt, config)
 		}(config)
 		result.callbacks = append(result.callbacks, ch)
 	}

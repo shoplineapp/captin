@@ -5,6 +5,7 @@ import (
 
 	models "github.com/shoplineapp/captin/internal/models"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
+	senders "github.com/shoplineapp/captin/internal/senders"
 )
 
 type ExecutionError struct {
@@ -37,7 +38,8 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 	// TODO: Pass event and destinations into dispatcher
 
 	// Create dispatcher and dispatch events
-	dispatcher := outgoing.NewDispatcherWithConfig(config)
+	sender := senders.HTTPEventSender{}
+	dispatcher := outgoing.NewDispatcherWithConfig(config, &sender)
 	dispatcher.Dispatch(e)
 
 	return true, nil
