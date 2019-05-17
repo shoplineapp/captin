@@ -13,7 +13,7 @@
       "order.update"
     ],
     "source": "core-api",
-    "name": "sync_service",
+    "name": "service_one",
     "include_document": false
   },
   {
@@ -26,7 +26,7 @@
       "user.create"
     ],
     "source": "open-api",
-    "name": "sync_service",
+    "name": "service_two",
     "include_document": false
   }
 ]

@@ -1,16 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	internal "github.com/shoplineapp/captin/internal"
 	models "github.com/shoplineapp/captin/internal/models"
+	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 )
 
 func main() {
-	fmt.Println("* Starting captin")
+	fmt.Println("* Starting captin (Press ENTER to quit)")
 
 	pwd, _ := os.Getwd()
 	path := os.Args[1:][0]
