@@ -5,26 +5,30 @@ import (
 	sender "github.com/shoplineapp/captin/internal/senders"
 )
 
+// DispatcherError - Error when send events
+type DispatcherError struct {
+	msg           string
+	Event         models.IncomingEvent
+	Configuration models.Configuration
+}
+
+func (e *DispatcherError) Error() string {
+	return e.msg
+}
+
 // Dispatcher - Event Dispatcher
 type Dispatcher struct {
-	callbacks []chan models.IncomingEvent
-	sender    sender.EventSenderInterface
+	configs []models.Configuration
+	sender  sender.EventSenderInterface
+	Errors  []error
 }
 
 // NewDispatcherWithConfig - Create Outgoing event dispatcher with config
 func NewDispatcherWithConfig(configs []models.Configuration, sender sender.EventSenderInterface) *Dispatcher {
 	result := Dispatcher{
-		callbacks: []chan models.IncomingEvent{},
-		sender:    sender,
-	}
-
-	for _, config := range configs {
-		ch := make(chan models.IncomingEvent)
-		go func(conf models.Configuration) {
-			evt := <-ch
-			sender.SendEvent(evt, config)
-		}(config)
-		result.callbacks = append(result.callbacks, ch)
+		configs: configs,
+		sender:  sender,
+		Errors:  []error{},
 	}
 
 	return &result
@@ -32,12 +36,17 @@ func NewDispatcherWithConfig(configs []models.Configuration, sender sender.Event
 
 // Dispatch - Dispatch an event to outgoing webhook
 func (d *Dispatcher) Dispatch(e models.IncomingEvent) error {
-
-	for _, handler := range d.callbacks {
-		go func(handler chan models.IncomingEvent) {
-			handler <- e
-		}(handler)
+	for _, config := range d.configs {
+		go func(evt models.IncomingEvent, conf models.Configuration) {
+			err := d.sender.SendEvent(evt, conf)
+			if err != nil {
+				d.Errors = append(d.Errors, &DispatcherError{
+					msg:           err.Error(),
+					Configuration: conf,
+					Event:         evt,
+				})
+			}
+		}(e, config)
 	}
-
 	return nil
 }
