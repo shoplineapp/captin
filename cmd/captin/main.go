@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	internal "github.com/shoplineapp/captin/internal"
 	models "github.com/shoplineapp/captin/internal/models"
 )
 
@@ -17,6 +18,6 @@ func main() {
 
 	mappedConfigs := models.NewConfigurationMapperFromPath(absPath)
 
-	captin := Captin{ConfigMap: mappedConfigs}
-	captin.Execute(IncomingEvent{Key: "product.update", Source: "core", Payload: map[string]interface{}{"field1": 1}})
+	captin := internal.Captin{ConfigMap: *mappedConfigs}
+	captin.Execute(models.IncomingEvent{Key: "product.update", Source: "core", Payload: map[string]interface{}{"field1": 1}})
 }
