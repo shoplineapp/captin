@@ -17,6 +17,6 @@ func main() {
 
 	mappedConfigs := models.NewConfigurationMapperFromPath(absPath)
 
-	// TODO: Use Mapped Configuration for webhook logics
-	fmt.Printf("%+v\n", mappedConfigs.ActionMap)
+	captin := Captin{ConfigMap: mappedConfigs}
+	captin.Execute(IncomingEvent{Key: "product.update", Source: "core", Payload: map[string]interface{}{"field1": 1}})
 }

@@ -41,3 +41,7 @@ func NewConfigurationMapperFromPath(path string) *ConfigurationMapper {
 
 	return NewConfigurationMapper(configs)
 }
+
+func (cm ConfigurationMapper) ConfigsForKey(eventKey string) []Configuration {
+	return cm.ActionMap[eventKey]
+}

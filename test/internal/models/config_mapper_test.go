@@ -80,3 +80,12 @@ func TestReadLocalFile(t *testing.T) {
 	assert.Contains(t, names, "sync_service")
 	assert.Contains(t, names, "sync_service2")
 }
+
+func TestConfigsForKey(t *testing.T) {
+	subject := NewConfigurationMapper(setup())
+	action := subject.ConfigsForKey("action:0")
+	assert.Equal(t, 3, len(action))
+	names := getNames(action)
+	assert.Contains(t, names, "0")
+	assert.Contains(t, names, "1")
+}

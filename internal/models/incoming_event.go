@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 )
 
-type Event struct {
+type IncomingEvent struct {
 	Key     string                 `json:"event_key"` // Required, The identifier of an event, usually form as PREFIX.MODEL.ACTION
 	Source  string                 `json:"source"`    // Required, Event source from
 	Payload map[string]interface{} `json:"payload"`   // Optional, custom payload / document from caller
@@ -14,13 +14,13 @@ type Event struct {
 	TargetId   string `json:"target_id"`
 }
 
-func NewEvent(data []byte) Event {
-	event := Event{}
-	json.Unmarshal(data, &event)
-	return event
+func NewIncomingEvent(data []byte) IncomingEvent {
+	e := IncomingEvent{}
+	json.Unmarshal(data, &e)
+	return e
 }
 
-func (e Event) IsValid() bool {
+func (e IncomingEvent) IsValid() bool {
 	if e.Key == "" || e.Source == "" {
 		return false
 	}
