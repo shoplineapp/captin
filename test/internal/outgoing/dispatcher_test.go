@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	models "github.com/shoplineapp/captin/internal/models"
-	outgoing "github.com/shoplineapp/captin/internal/outgoing"
+	. "github.com/shoplineapp/captin/internal/outgoing"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -18,8 +18,8 @@ type senderMock struct {
 	mock.Mock
 }
 
-func (s *senderMock) SendEvent(e models.IncomingEvent, config models.Configuration) error {
-	args := s.Called(e, config)
+func (s *senderMock) SendEvent(e models.IncomingEvent, d models.Destination) error {
+	args := s.Called(e, d)
 	return args.Error(0)
 }
 
@@ -30,12 +30,16 @@ func TestDispatchEvents_Error(t *testing.T) {
 	}
 	configs := []models.Configuration{}
 	json.Unmarshal(data, &configs)
+	destinations := []models.Destination{}
+	for _, config := range configs {
+		destinations = append(destinations, models.Destination{Config: config})
+	}
 
 	sender := new(senderMock)
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(errors.New("Mock Error"))
 
-	dispatcher := outgoing.NewDispatcherWithConfig(configs, sender)
+	dispatcher := NewDispatcherWithDestinations(destinations, sender)
 
 	dispatcher.Dispatch(models.IncomingEvent{
 		Key:        "product.update",
@@ -66,12 +70,16 @@ func TestDispatchEvents(t *testing.T) {
 	}
 	configs := []models.Configuration{}
 	json.Unmarshal(data, &configs)
+	destinations := []models.Destination{}
+	for _, config := range configs {
+		destinations = append(destinations, models.Destination{Config: config})
+	}
 
 	sender := new(senderMock)
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
 
-	dispatcher := outgoing.NewDispatcherWithConfig(configs, sender)
+	dispatcher := NewDispatcherWithDestinations(destinations, sender)
 
 	dispatcher.Dispatch(models.IncomingEvent{
 		Key:        "product.update",

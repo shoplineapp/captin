@@ -1,4 +1,4 @@
-package outgoing_tests
+package outgoing_test
 
 import (
 	"testing"
@@ -29,7 +29,7 @@ func TestCustom_Sift(t *testing.T) {
 	filter := new(FilterMock)
 	filter.On("Applicable", mock.Anything).Return(true)
 	filter.On("Run", mock.Anything).Return(true, nil)
-	destinations := []Destination{
+	destinations := []models.Destination{
 		{Config: models.Configuration{Source: "service_1"}},
 		{Config: models.Configuration{Source: "service_2"}},
 	}
@@ -42,7 +42,7 @@ func TestCustom_Sift(t *testing.T) {
 	filter = new(FilterMock)
 	filter.On("Applicable", mock.Anything).Return(false)
 	filter.On("Run", mock.Anything).Return(true, nil)
-	destinations = []Destination{
+	destinations = []models.Destination{
 		{Config: models.Configuration{Source: "service_1"}},
 		{Config: models.Configuration{Source: "service_2"}},
 	}
@@ -55,7 +55,7 @@ func TestCustom_Sift(t *testing.T) {
 	filter = new(FilterMock)
 	filter.On("Applicable", mock.Anything).Return(true)
 	filter.On("Run", mock.Anything).Return(false, nil)
-	destinations = []Destination{
+	destinations = []models.Destination{
 		{Config: models.Configuration{Source: "service_1"}},
 	}
 	sifted = Custom{}.Sift([]outgoing_filters.Filter{filter}, destinations)

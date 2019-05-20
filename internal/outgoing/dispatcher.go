@@ -7,9 +7,9 @@ import (
 
 // DispatcherError - Error when send events
 type DispatcherError struct {
-	msg           string
-	Event         models.IncomingEvent
-	Configuration models.Configuration
+	msg         string
+	Event       models.IncomingEvent
+	Destination models.Destination
 }
 
 func (e *DispatcherError) Error() string {
@@ -18,17 +18,17 @@ func (e *DispatcherError) Error() string {
 
 // Dispatcher - Event Dispatcher
 type Dispatcher struct {
-	configs []models.Configuration
-	sender  sender.EventSenderInterface
-	Errors  []error
+	destinations []models.Destination
+	sender       sender.EventSenderInterface
+	Errors       []error
 }
 
-// NewDispatcherWithConfig - Create Outgoing event dispatcher with config
-func NewDispatcherWithConfig(configs []models.Configuration, sender sender.EventSenderInterface) *Dispatcher {
+// NewDispatcherWithDestinations - Create Outgoing event dispatcher with destinations
+func NewDispatcherWithDestinations(destinations []models.Destination, sender sender.EventSenderInterface) *Dispatcher {
 	result := Dispatcher{
-		configs: configs,
-		sender:  sender,
-		Errors:  []error{},
+		destinations: destinations,
+		sender:       sender,
+		Errors:       []error{},
 	}
 
 	return &result
@@ -36,17 +36,17 @@ func NewDispatcherWithConfig(configs []models.Configuration, sender sender.Event
 
 // Dispatch - Dispatch an event to outgoing webhook
 func (d *Dispatcher) Dispatch(e models.IncomingEvent) error {
-	for _, config := range d.configs {
-		go func(evt models.IncomingEvent, conf models.Configuration) {
-			err := d.sender.SendEvent(evt, conf)
+	for _, destination := range d.destinations {
+		go func(evt models.IncomingEvent, destination models.Destination) {
+			err := d.sender.SendEvent(evt, destination)
 			if err != nil {
 				d.Errors = append(d.Errors, &DispatcherError{
-					msg:           err.Error(),
-					Configuration: conf,
-					Event:         evt,
+					msg:         err.Error(),
+					Destination: destination,
+					Event:       evt,
 				})
 			}
-		}(e, config)
+		}(e, destination)
 	}
 	return nil
 }

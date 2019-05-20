@@ -8,8 +8,8 @@ import (
 type Custom struct{}
 
 // Sift - Custom check will filter ineligible destination
-func (c Custom) Sift(filters []Filter, destinations []Destination) []Destination {
-	sifted := []Destination{}
+func (c Custom) Sift(filters []Filter, destinations []models.Destination) []models.Destination {
+	sifted := []models.Destination{}
 	for _, destination := range destinations {
 		eligible := true
 		for _, filter := range filters {

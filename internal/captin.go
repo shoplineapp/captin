@@ -27,10 +27,10 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 
 	configs := c.ConfigMap.ConfigsForKey(e.Key)
 
-	destinations := []outgoing.Destination{}
+	destinations := []models.Destination{}
 
 	for _, config := range configs {
-		destinations = append(destinations, outgoing.Destination{Config: config})
+		destinations = append(destinations, models.Destination{Config: config})
 	}
 
 	destinations = outgoing.Custom{}.Sift(outgoing.CustomFilters(e), destinations)
@@ -39,7 +39,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 
 	// Create dispatcher and dispatch events
 	sender := senders.HTTPEventSender{}
-	dispatcher := outgoing.NewDispatcherWithConfig(config, &sender)
+	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, &sender)
 	dispatcher.Dispatch(e)
 
 	for _, err := range dispatcher.Errors {
