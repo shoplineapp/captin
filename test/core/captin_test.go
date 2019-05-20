@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	. "captin/internal"
+	. "captin/core"
 	models "captin/internal/models"
 )
 

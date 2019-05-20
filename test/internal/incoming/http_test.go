@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	internal "captin/internal"
+	interfaces "captin/interfaces"
 	incoming "captin/internal/incoming"
 	models "captin/internal/models"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +15,7 @@ import (
 )
 
 type captinMock struct {
-	internal.Captin
+	interfaces.CaptinInterface
 	mock.Mock
 }
 

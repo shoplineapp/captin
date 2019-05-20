@@ -1,8 +1,8 @@
 package outgoing
 
 import (
+	interfaces "captin/interfaces"
 	models "captin/internal/models"
-	sender "captin/internal/senders"
 )
 
 // DispatcherError - Error when send events
@@ -19,12 +19,12 @@ func (e *DispatcherError) Error() string {
 // Dispatcher - Event Dispatcher
 type Dispatcher struct {
 	destinations []models.Destination
-	sender       sender.EventSenderInterface
+	sender       interfaces.EventSenderInterface
 	Errors       []error
 }
 
 // NewDispatcherWithDestinations - Create Outgoing event dispatcher with destinations
-func NewDispatcherWithDestinations(destinations []models.Destination, sender sender.EventSenderInterface) *Dispatcher {
+func NewDispatcherWithDestinations(destinations []models.Destination, sender interfaces.EventSenderInterface) *Dispatcher {
 	result := Dispatcher{
 		destinations: destinations,
 		sender:       sender,

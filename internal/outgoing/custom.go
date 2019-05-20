@@ -1,23 +1,22 @@
 package outgoing
 
 import (
+	interfaces "captin/interfaces"
 	models "captin/internal/models"
-	. "captin/internal/outgoing/filters"
 )
 
 type Custom struct{}
 
 // Sift - Custom check will filter ineligible destination
-func (c Custom) Sift(e models.IncomingEvent, filters []Filter, destinations []models.Destination) []models.Destination {
+func (c Custom) Sift(e models.IncomingEvent, filters []interfaces.CustomFilter, destinations []models.Destination) []models.Destination {
 	sifted := []models.Destination{}
 	for _, destination := range destinations {
 		eligible := true
 		for _, filter := range filters {
-			config := destination.Config
-			if eligible == false || filter.Applicable(e, config) == false {
+			if eligible == false || filter.Applicable(e, destination) == false {
 				continue
 			}
-			valid, _ := filter.Run(e, config)
+			valid, _ := filter.Run(e, destination)
 			if valid != true {
 				eligible = false
 			}

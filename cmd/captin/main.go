@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	internal "captin/internal"
+	core "captin/core"
 	models "captin/internal/models"
 )
 
@@ -19,7 +19,7 @@ func main() {
 
 	mappedConfigs := models.NewConfigurationMapperFromPath(absPath)
 
-	captin := internal.Captin{ConfigMap: *mappedConfigs}
+	captin := core.NewCaptin(*configMapper)
 	captin.Execute(models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
