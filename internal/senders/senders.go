@@ -6,5 +6,5 @@ import (
 
 // EventSenderInterface - Event Sender Interface
 type EventSenderInterface interface {
-	SendEvent(e models.IncomingEvent, config models.Configuration) error
+	SendEvent(e models.IncomingEvent, d models.Destination) error
 }

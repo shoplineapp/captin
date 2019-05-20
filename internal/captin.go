@@ -25,21 +25,21 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 		return false, &ExecutionError{Cause: "invalid incoming event object"}
 	}
 
-	config := c.ConfigMap.ConfigsForKey(e.Key)
+	configs := c.ConfigMap.ConfigsForKey(e.Key)
 
-	// _ = []outgoing.Destination{}
+	destinations := []models.Destination{}
 
-	// for _, config := range configs {
-	// 	append(destinations, &outgoing.Destination{config})
-	// }
+	for _, config := range configs {
+		destinations = append(destinations, models.Destination{Config: config})
+	}
 
-	// TODO: Pass event and configs into custom to filter out destinations
+	destinations = outgoing.Custom{}.Sift(outgoing.CustomFilters(e), destinations)
 
 	// TODO: Pass event and destinations into dispatcher
 
 	// Create dispatcher and dispatch events
 	sender := senders.HTTPEventSender{}
-	dispatcher := outgoing.NewDispatcherWithConfig(config, &sender)
+	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, &sender)
 	dispatcher.Dispatch(e)
 
 	for _, err := range dispatcher.Errors {

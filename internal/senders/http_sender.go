@@ -21,8 +21,8 @@ type HTTPResponse struct {
 type HTTPEventSender struct{}
 
 // SendEvent - #HttpEventSender SendEvent
-func (c *HTTPEventSender) SendEvent(e models.IncomingEvent, config models.Configuration) error {
-	url := config.CallbackURL
+func (c *HTTPEventSender) SendEvent(e models.IncomingEvent, d models.Destination) error {
+	url := d.Config.CallbackURL
 	payload, err := json.Marshal(e)
 	if err != nil {
 		return err
