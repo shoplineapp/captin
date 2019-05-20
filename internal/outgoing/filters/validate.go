@@ -9,11 +9,10 @@ import (
 
 type ValidateFilter struct {
 	Filter
-	Event models.IncomingEvent
 }
 
-func (f ValidateFilter) Run(c models.Configuration) (bool, error) {
-	payloadJson, _ := json.Marshal(f.Event.Payload)
+func (f ValidateFilter) Run(e models.IncomingEvent, c models.Configuration) (bool, error) {
+	payloadJson, _ := json.Marshal(e.Payload)
 	configJson, _ := json.Marshal(c)
 	template := fmt.Sprintf(
 		`(function() {
@@ -37,6 +36,6 @@ func (f ValidateFilter) Run(c models.Configuration) (bool, error) {
 	return valid, err
 }
 
-func (f ValidateFilter) Applicable(c models.Configuration) bool {
+func (f ValidateFilter) Applicable(e models.IncomingEvent, c models.Configuration) bool {
 	return (c.Validate) != ""
 }

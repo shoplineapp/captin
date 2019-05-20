@@ -20,12 +20,12 @@ func main() {
 	absPath := filepath.Join(pwd, path)
 	configMapper := models.NewConfigurationMapperFromPath(absPath)
 
-	captin := internal.Captin{ConfigMap: *configMapper}
+	captin := internal.NewCaptin(*configMapper)
 
 	// Set up api server
 	router := gin.Default()
 	handler := incoming.HttpEventHandler{}
-	handler.Setup(captin)
+	handler.Setup(*captin)
 	handler.SetRoutes(router)
 
 	fmt.Printf("* Binding captin on 0.0.0.0%s\n", port)
