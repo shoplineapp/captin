@@ -1,6 +1,7 @@
 package outgoing_filters
 
 import (
+	interfaces "captin/interfaces"
 	models "captin/internal/models"
 	"encoding/json"
 	"fmt"
@@ -8,12 +9,12 @@ import (
 )
 
 type ValidateFilter struct {
-	Filter
+	interfaces.CustomFilter
 }
 
-func (f ValidateFilter) Run(e models.IncomingEvent, c models.Configuration) (bool, error) {
+func (f ValidateFilter) Run(e models.IncomingEvent, d models.Destination) (bool, error) {
 	payloadJson, _ := json.Marshal(e.Payload)
-	configJson, _ := json.Marshal(c)
+	configJson, _ := json.Marshal(d.Config)
 	template := fmt.Sprintf(
 		`(function() {
 			var document = %s || {};
@@ -36,6 +37,6 @@ func (f ValidateFilter) Run(e models.IncomingEvent, c models.Configuration) (boo
 	return valid, err
 }
 
-func (f ValidateFilter) Applicable(e models.IncomingEvent, c models.Configuration) bool {
-	return (c.Validate) != ""
+func (f ValidateFilter) Applicable(e models.IncomingEvent, d models.Destination) bool {
+	return (d.Config.Validate) != ""
 }

@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	internal "captin/internal"
+	core "captin/core"
 	incoming "captin/internal/incoming"
 	models "captin/internal/models"
 )
@@ -20,7 +20,7 @@ func main() {
 	absPath := filepath.Join(pwd, path)
 	configMapper := models.NewConfigurationMapperFromPath(absPath)
 
-	captin := internal.NewCaptin(*configMapper)
+	captin := core.NewCaptin(*configMapper)
 
 	// Set up api server
 	router := gin.Default()

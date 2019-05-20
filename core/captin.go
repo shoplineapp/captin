@@ -1,8 +1,9 @@
-package internal
+package core
 
 import (
 	"fmt"
 
+	interfaces "captin/interfaces"
 	models "captin/internal/models"
 	outgoing "captin/internal/outgoing"
 	outgoing_filters "captin/internal/outgoing/filters"
@@ -17,19 +18,15 @@ func (e *ExecutionError) Error() string {
 	return fmt.Sprintf("ExecutionError: caused by %s", e.Cause)
 }
 
-type CaptinInterface interface {
-	Execute(e models.IncomingEvent) (bool, error)
-}
-
 type Captin struct {
 	ConfigMap models.ConfigurationMapper
-	filters   []outgoing_filters.Filter
+	filters   []interfaces.CustomFilter
 }
 
 func NewCaptin(configMap models.ConfigurationMapper) *Captin {
 	c := Captin{
 		ConfigMap: configMap,
-		filters: []outgoing_filters.Filter{
+		filters: []interfaces.CustomFilter{
 			outgoing_filters.ValidateFilter{},
 			outgoing_filters.SourceFilter{},
 		},
