@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	internal "github.com/shoplineapp/captin/internal"
-	incoming "github.com/shoplineapp/captin/internal/incoming"
-	models "github.com/shoplineapp/captin/internal/models"
+	internal "captin/internal"
+	incoming "captin/internal/incoming"
+	models "captin/internal/models"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 	// Set up api server
 	router := gin.Default()
 	handler := incoming.HttpEventHandler{}
-	handler.Setup(&captin)
+	handler.Setup(captin)
 	handler.SetRoutes(router)
 
 	fmt.Printf("* Binding captin on 0.0.0.0%s\n", port)

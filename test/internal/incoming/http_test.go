@@ -7,19 +7,19 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	internal "github.com/shoplineapp/captin/internal"
-	incoming "github.com/shoplineapp/captin/internal/incoming"
-	models "github.com/shoplineapp/captin/internal/models"
+	internal "captin/internal"
+	incoming "captin/internal/incoming"
+	models "captin/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-type CaptinMock struct {
+type captinMock struct {
 	internal.Captin
 	mock.Mock
 }
 
-func (f *CaptinMock) Execute(c models.IncomingEvent) (bool, error) {
+func (f *captinMock) Execute(c models.IncomingEvent) (bool, error) {
 	args := f.Called(c)
 	return args.Bool(0), args.Error(1)
 }
@@ -27,12 +27,11 @@ func (f *CaptinMock) Execute(c models.IncomingEvent) (bool, error) {
 func TestHttpEventHandler_SetRoutes(t *testing.T) {
 	router := gin.Default()
 
-	configMapper := models.NewConfigurationMapper([]models.Configuration{})
-
-	c := internal.Captin{ConfigMap: *configMapper}
+	captin := new(captinMock)
+	captin.On("Execute", mock.Anything).Return(true, nil)
 
 	handler := incoming.HttpEventHandler{}
-	handler.Setup(&c)
+	handler.Setup(captin)
 	handler.SetRoutes(router)
 
 	w := httptest.NewRecorder()
@@ -51,4 +50,6 @@ func TestHttpEventHandler_SetRoutes(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 	assert.Equal(t, 201, w.Code)
+
+	captin.AssertNumberOfCalls(t, "Execute", 1)
 }

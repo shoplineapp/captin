@@ -1,18 +1,18 @@
 package incoming
 
 import (
+	internal "captin/internal"
+	models "captin/internal/models"
 	"github.com/gin-gonic/gin"
-	internal "github.com/shoplineapp/captin/internal"
-	models "github.com/shoplineapp/captin/internal/models"
 	"net/http"
 )
 
 type HttpEventHandler struct {
 	Handler
-	captin *internal.Captin
+	captin internal.CaptinInterface
 }
 
-func (h *HttpEventHandler) Setup(c *internal.Captin) {
+func (h *HttpEventHandler) Setup(c internal.CaptinInterface) {
 	h.captin = c
 }
 

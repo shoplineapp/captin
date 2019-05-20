@@ -1,7 +1,7 @@
 package incoming
 
 import (
-	models "github.com/shoplineapp/captin/internal/models"
+	models "captin/internal/models"
 )
 
 type Handler interface {

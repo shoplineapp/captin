@@ -16,12 +16,11 @@ func (e *ExecutionError) Error() string {
 	return fmt.Sprintf("ExecutionError: caused by %s", e.Cause)
 }
 
-type Executable interface {
+type CaptinInterface interface {
 	Execute(e models.IncomingEvent) (bool, error)
 }
 
 type Captin struct {
-	Executable
 	ConfigMap models.ConfigurationMapper
 }
 
