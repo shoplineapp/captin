@@ -8,16 +8,16 @@ import (
 type Custom struct{}
 
 // Sift - Custom check will filter ineligible destination
-func (c Custom) Sift(filters []Filter, destinations []models.Destination) []models.Destination {
+func (c Custom) Sift(e models.IncomingEvent, filters []Filter, destinations []models.Destination) []models.Destination {
 	sifted := []models.Destination{}
 	for _, destination := range destinations {
 		eligible := true
 		for _, filter := range filters {
 			config := destination.Config
-			if eligible == false || filter.Applicable(config) == false {
+			if eligible == false || filter.Applicable(e, config) == false {
 				continue
 			}
-			valid, _ := filter.Run(config)
+			valid, _ := filter.Run(e, config)
 			if valid != true {
 				eligible = false
 			}
@@ -27,11 +27,4 @@ func (c Custom) Sift(filters []Filter, destinations []models.Destination) []mode
 		}
 	}
 	return sifted
-}
-
-func CustomFilters(e models.IncomingEvent) []Filter {
-	return []Filter{
-		ValidateFilter{Event: e},
-		SourceFilter{Event: e},
-	}
 }

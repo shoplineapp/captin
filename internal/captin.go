@@ -5,6 +5,7 @@ import (
 
 	models "captin/internal/models"
 	outgoing "captin/internal/outgoing"
+	outgoing_filters "captin/internal/outgoing/filters"
 	senders "captin/internal/senders"
 )
 
@@ -16,8 +17,24 @@ func (e *ExecutionError) Error() string {
 	return fmt.Sprintf("ExecutionError: caused by %s", e.Cause)
 }
 
+type CaptinInterface interface {
+	Execute(e models.IncomingEvent) (bool, error)
+}
+
 type Captin struct {
 	ConfigMap models.ConfigurationMapper
+	filters   []outgoing_filters.Filter
+}
+
+func NewCaptin(configMap models.ConfigurationMapper) *Captin {
+	c := Captin{
+		ConfigMap: configMap,
+		filters: []outgoing_filters.Filter{
+			outgoing_filters.ValidateFilter{},
+			outgoing_filters.SourceFilter{},
+		},
+	}
+	return &c
 }
 
 func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
@@ -33,7 +50,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 		destinations = append(destinations, models.Destination{Config: config})
 	}
 
-	destinations = outgoing.Custom{}.Sift(outgoing.CustomFilters(e), destinations)
+	destinations = outgoing.Custom{}.Sift(e, c.filters, destinations)
 
 	// TODO: Pass event and destinations into dispatcher
 

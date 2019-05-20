@@ -6,13 +6,12 @@ import (
 
 type SourceFilter struct {
 	Filter
-	Event models.IncomingEvent
 }
 
-func (f SourceFilter) Run(c models.Configuration) (bool, error) {
-	return f.Event.Source != c.Source, nil
+func (f SourceFilter) Run(e models.IncomingEvent, c models.Configuration) (bool, error) {
+	return e.Source != c.Source, nil
 }
 
-func (f SourceFilter) Applicable(c models.Configuration) bool {
+func (f SourceFilter) Applicable(e models.IncomingEvent, c models.Configuration) bool {
 	return c.AllowLoopback == false
 }

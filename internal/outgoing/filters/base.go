@@ -6,6 +6,6 @@ import (
 
 type Filter interface {
 	// Event models.IncomingEvent
-	Run(c models.Configuration) (bool, error)
-	Applicable(c models.Configuration) bool
+	Run(e models.IncomingEvent, c models.Configuration) (bool, error)
+	Applicable(e models.IncomingEvent, c models.Configuration) bool
 }
