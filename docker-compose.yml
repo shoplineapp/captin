@@ -1,0 +1,11 @@
+
+version: '3'
+
+services:
+  captin:
+    build: .
+    image: captin:dev
+    ports: 
+      - 3100:3000
+    environment: 
+      - CAPTIN_PORT=3000

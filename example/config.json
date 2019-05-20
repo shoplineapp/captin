@@ -1,0 +1,32 @@
+[
+  {
+    "id": "1",
+    "callback_url": "https://postman-echo.com/post",
+    "validate": "document.wapos_id === undefined",
+    "throttle": "500ms",
+    "actions": [
+      "product.update",
+      "product.create",
+      "user.create",
+      "user.update",
+      "order.create",
+      "order.update"
+    ],
+    "source": "core-api",
+    "name": "sync_service",
+    "include_document": false
+  },
+  {
+    "id": "2",
+    "callback_url": "https://postman-echo.com/post",
+    "throttle": "500ms",
+    "actions": [
+      "product.update",
+      "product.create",
+      "user.create"
+    ],
+    "source": "open-api",
+    "name": "sync_service2",
+    "include_document": false
+  }
+]

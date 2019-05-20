@@ -1,0 +1,6 @@
+.semaphore/
+.vscode/
+build/
+vendor/
+
+README.md
