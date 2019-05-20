@@ -11,32 +11,30 @@ blocks:
         commands:
           - sem-version go 1.12
           # Go project boiler plate
-          - export "SEMAPHORE_GIT_DIR=$(go env GOPATH)/src/github.com/${SEMAPHORE_PROJECT_NAME}"
+          - export "SEMAPHORE_GIT_DIR=~/src/${SEMAPHORE_PROJECT_NAME}"
           - export "PATH=$(go env GOPATH)/bin:${PATH}"
           - mkdir -vp "${SEMAPHORE_GIT_DIR}" "$(go env GOPATH)/bin"
           # Dep install db
-          - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
           - checkout
       jobs:
-        - name: Dep ensure
+        - name: Go Mod Download
           commands:
-            - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum Gopkg.lock),deps-$SEMAPHORE_GIT_BRANCH,deps-master
-            - dep ensure
-            - cache store deps-$SEMAPHORE_GIT_BRANCH-$(checksum Gopkg.lock) vendor
+            - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum),deps-$SEMAPHORE_GIT_BRANCH,deps-master
+            - go mod download
+            - cache store deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum) vendor
   - name: "Unit tests"
     task:
       prologue:
         commands:
           - sem-version go 1.12
           # Go project boiler plate
-          - export "SEMAPHORE_GIT_DIR=$(go env GOPATH)/src/github.com/shoplineapp/${SEMAPHORE_PROJECT_NAME}"
+          - export "SEMAPHORE_GIT_DIR=~/src/${SEMAPHORE_PROJECT_NAME}"
           - export "PATH=$(go env GOPATH)/bin:${PATH}"
           - mkdir -vp "${SEMAPHORE_GIT_DIR}" "$(go env GOPATH)/bin"
           # Dep install db
-          - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
           - checkout
-          - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum Gopkg.lock),deps-$SEMAPHORE_GIT_BRANCH,deps-master
-          - dep ensure
+          - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum),deps-$SEMAPHORE_GIT_BRANCH,deps-master
+          - go mod download
       jobs:
         - name: Suite
           commands:

@@ -1,7 +1,7 @@
 package senders
 
 import (
-	models "github.com/shoplineapp/captin/internal/models"
+	models "captin/internal/models"
 )
 
 // EventSenderInterface - Event Sender Interface
