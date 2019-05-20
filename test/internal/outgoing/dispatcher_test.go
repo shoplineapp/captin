@@ -39,7 +39,7 @@ func TestDispatchEvents_Error(t *testing.T) {
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(errors.New("Mock Error"))
 
-	dispatcher := NewDispatcherWithDestinations(destinations, sender)
+	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, sender)
 
 	dispatcher.Dispatch(models.IncomingEvent{
 		Key:        "product.update",
@@ -79,7 +79,7 @@ func TestDispatchEvents(t *testing.T) {
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
 
-	dispatcher := NewDispatcherWithDestinations(destinations, sender)
+	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, sender)
 
 	dispatcher.Dispatch(models.IncomingEvent{
 		Key:        "product.update",

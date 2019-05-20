@@ -1,8 +1,8 @@
 package outgoing
 
 import (
-	models "github.com/shoplineapp/captin/internal/models"
-	. "github.com/shoplineapp/captin/internal/outgoing/filters"
+	models "captin/internal/models"
+	. "captin/internal/outgoing/filters"
 )
 
 type Custom struct{}

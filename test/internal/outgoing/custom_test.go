@@ -3,9 +3,9 @@ package outgoing_test
 import (
 	"testing"
 
-	models "github.com/shoplineapp/captin/internal/models"
-	. "github.com/shoplineapp/captin/internal/outgoing"
-	outgoing_filters "github.com/shoplineapp/captin/internal/outgoing/filters"
+	models "captin/internal/models"
+	. "captin/internal/outgoing"
+	outgoing_filters "captin/internal/outgoing/filters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

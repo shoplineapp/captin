@@ -1,7 +1,7 @@
 package outgoing_filters
 
 import (
-	models "github.com/shoplineapp/captin/internal/models"
+	models "captin/internal/models"
 )
 
 type SourceFilter struct {

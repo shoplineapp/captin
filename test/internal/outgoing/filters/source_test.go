@@ -4,9 +4,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 
-	helpers "github.com/shoplineapp/captin/internal/helpers"
-	models "github.com/shoplineapp/captin/internal/models"
-	. "github.com/shoplineapp/captin/internal/outgoing/filters"
+	helpers "captin/internal/helpers"
+	models "captin/internal/models"
+	. "captin/internal/outgoing/filters"
 )
 
 func TestSourceFilterRunValidate(t *testing.T) {
