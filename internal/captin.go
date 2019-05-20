@@ -2,8 +2,10 @@ package internal
 
 import (
 	"fmt"
+
 	models "github.com/shoplineapp/captin/internal/models"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
+	senders "github.com/shoplineapp/captin/internal/senders"
 )
 
 type ExecutionError struct {
@@ -35,7 +37,20 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 
 	// TODO: Pass event and destinations into dispatcher
 
-	// TODO: return dispatcher instance (?)
+	// Create dispatcher and dispatch events
+	sender := senders.HTTPEventSender{}
+	dispatcher := outgoing.NewDispatcherWithConfig(config, &sender)
+	dispatcher.Dispatch(e)
+
+	for _, err := range dispatcher.Errors {
+		switch dispatcherErr := err.(type) {
+		case *outgoing.DispatcherError:
+			fmt.Println("[Dispatcher] Error on event: ", dispatcherErr.Event.TargetId)
+			fmt.Println("[Dispatcher] Error on event type: ", dispatcherErr.Event.TargetType)
+		default:
+			fmt.Println(e)
+		}
+	}
 
 	return true, nil
 }
