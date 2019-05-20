@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	. "github.com/shoplineapp/captin/internal"
-	models "github.com/shoplineapp/captin/internal/models"
+	. "captin/internal"
+	models "captin/internal/models"
 )
 
 func TestExecute(t *testing.T) {

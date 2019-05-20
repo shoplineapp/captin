@@ -1,22 +1,20 @@
-package models
+package outgoing_filters
 
 import (
+	models "captin/internal/models"
 	"encoding/json"
 	"fmt"
 	"github.com/robertkrimen/otto"
 )
 
-type Evaluator struct {
-	Payload map[string]interface{}
-	Config  Configuration
+type ValidateFilter struct {
+	Filter
+	Event models.IncomingEvent
 }
 
-func (evaluator Evaluator) Run() (bool, error) {
-	if (evaluator.Config.Validate) == "" {
-		return true, nil
-	}
-	payloadJson, _ := json.Marshal(evaluator.Payload)
-	configJson, _ := json.Marshal(evaluator.Config)
+func (f ValidateFilter) Run(c models.Configuration) (bool, error) {
+	payloadJson, _ := json.Marshal(f.Event.Payload)
+	configJson, _ := json.Marshal(c)
 	template := fmt.Sprintf(
 		`(function() {
 			var document = %s || {};
@@ -34,7 +32,11 @@ func (evaluator Evaluator) Run() (bool, error) {
 		err = errToB
 	}
 	if err != nil {
-		fmt.Printf("[Evaluator] Unable to parse result %s", err)
+		fmt.Printf("[ValidateFilter] Unable to parse result %s", err)
 	}
 	return valid, err
+}
+
+func (f ValidateFilter) Applicable(c models.Configuration) bool {
+	return (c.Validate) != ""
 }

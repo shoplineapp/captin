@@ -1,16 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	internal "github.com/shoplineapp/captin/internal"
-	models "github.com/shoplineapp/captin/internal/models"
+	internal "captin/internal"
+	models "captin/internal/models"
 )
 
 func main() {
-	fmt.Println("* Starting captin")
+	fmt.Println("* Starting captin (Press ENTER to quit)")
 
 	pwd, _ := os.Getwd()
 	path := os.Args[1:][0]
@@ -19,5 +20,13 @@ func main() {
 	mappedConfigs := models.NewConfigurationMapperFromPath(absPath)
 
 	captin := internal.Captin{ConfigMap: *mappedConfigs}
-	captin.Execute(models.IncomingEvent{Key: "product.update", Source: "core", Payload: map[string]interface{}{"field1": 1}})
+	captin.Execute(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 1},
+		TargetType: "Product",
+		TargetId:   "product_id",
+	})
+
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 }

@@ -2,8 +2,10 @@ package internal
 
 import (
 	"fmt"
-	models "github.com/shoplineapp/captin/internal/models"
-	// outgoing "github.com/shoplineapp/captin/internal/outgoing"
+
+	models "captin/internal/models"
+	outgoing "captin/internal/outgoing"
+	senders "captin/internal/senders"
 )
 
 type ExecutionError struct {
@@ -28,19 +30,32 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 		return false, &ExecutionError{Cause: "invalid incoming event object"}
 	}
 
-	_ = c.ConfigMap.ConfigsForKey(e.Key)
+	configs := c.ConfigMap.ConfigsForKey(e.Key)
 
-	// _ = []outgoing.Destination{}
+	destinations := []models.Destination{}
 
-	// for _, config := range configs {
-	// 	append(destinations, &outgoing.Destination{config})
-	// }
+	for _, config := range configs {
+		destinations = append(destinations, models.Destination{Config: config})
+	}
 
-	// TODO: Pass event and configs into custom to filter out destinations
+	destinations = outgoing.Custom{}.Sift(outgoing.CustomFilters(e), destinations)
 
 	// TODO: Pass event and destinations into dispatcher
 
-	// TODO: return dispatcher instance (?)
+	// Create dispatcher and dispatch events
+	sender := senders.HTTPEventSender{}
+	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, &sender)
+	dispatcher.Dispatch(e)
+
+	for _, err := range dispatcher.Errors {
+		switch dispatcherErr := err.(type) {
+		case *outgoing.DispatcherError:
+			fmt.Println("[Dispatcher] Error on event: ", dispatcherErr.Event.TargetId)
+			fmt.Println("[Dispatcher] Error on event type: ", dispatcherErr.Event.TargetType)
+		default:
+			fmt.Println(e)
+		}
+	}
 
 	return true, nil
 }
