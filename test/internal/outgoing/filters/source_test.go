@@ -10,11 +10,13 @@ import (
 )
 
 func TestSourceFilterRunValidate(t *testing.T) {
-	assert.Equal(t, true, helpers.Tuples(SourceFilter{Event: models.IncomingEvent{Source: "service_1"}}.Run(models.Configuration{Source: "service_2"}))[0])
-	assert.Equal(t, false, helpers.Tuples(SourceFilter{Event: models.IncomingEvent{Source: "service_1"}}.Run(models.Configuration{Source: "service_1"}))[0])
+	event := models.IncomingEvent{Source: "service_1"}
+	assert.Equal(t, true, helpers.Tuples(SourceFilter{}.Run(event, models.Configuration{Source: "service_2"}))[0])
+	assert.Equal(t, false, helpers.Tuples(SourceFilter{}.Run(event, models.Configuration{Source: "service_1"}))[0])
 }
 
 func TestSourceFilterApplicable(t *testing.T) {
-	assert.Equal(t, true, SourceFilter{}.Applicable(models.Configuration{AllowLoopback: false}))
-	assert.Equal(t, false, SourceFilter{}.Applicable(models.Configuration{AllowLoopback: true}))
+	event := models.IncomingEvent{}
+	assert.Equal(t, true, SourceFilter{}.Applicable(event, models.Configuration{AllowLoopback: false}))
+	assert.Equal(t, false, SourceFilter{}.Applicable(event, models.Configuration{AllowLoopback: true}))
 }
