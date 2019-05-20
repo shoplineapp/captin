@@ -1,0 +1,45 @@
+[
+  {
+    "id": "1",
+    "callback_url": "https://postman-echo.com/post",
+    "validate": "obj.wapos_id",
+    "throttle": "500ms",
+    "actions": [
+      "product.update",
+      "product.create",
+      "user.create",
+      "user.update",
+      "order.create",
+      "order.update"
+    ],
+    "source": "core-api",
+    "name": "service_one",
+    "include_document": false
+  },
+  {
+    "id": "2",
+    "callback_url": "https://postman-echo.com/post",
+    "throttle": "500ms",
+    "actions": [
+      "product.update",
+      "product.create",
+      "user.create"
+    ],
+    "source": "open-api",
+    "name": "service_two",
+    "include_document": false
+  },
+  {
+    "id": "3",
+    "callback_url": "https://postman-echo.com/post",
+    "throttle": "500ms",
+    "actions": [
+      "product.update",
+      "product.create",
+      "user.create"
+    ],
+    "source": "open-api",
+    "name": "service_two",
+    "include_document": false
+  }
+]
