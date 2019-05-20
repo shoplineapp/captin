@@ -1,8 +1,8 @@
 package outgoing
 
 import (
-	models "github.com/shoplineapp/captin/internal/models"
-	sender "github.com/shoplineapp/captin/internal/senders"
+	models "captin/internal/models"
+	sender "captin/internal/senders"
 )
 
 // DispatcherError - Error when send events

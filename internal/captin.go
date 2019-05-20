@@ -3,9 +3,9 @@ package internal
 import (
 	"fmt"
 
-	models "github.com/shoplineapp/captin/internal/models"
-	outgoing "github.com/shoplineapp/captin/internal/outgoing"
-	senders "github.com/shoplineapp/captin/internal/senders"
+	models "captin/internal/models"
+	outgoing "captin/internal/outgoing"
+	senders "captin/internal/senders"
 )
 
 type ExecutionError struct {

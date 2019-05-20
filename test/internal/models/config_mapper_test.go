@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/shoplineapp/captin/internal/models"
+	. "captin/internal/models"
 )
 
 func setup() []Configuration {
