@@ -15,13 +15,12 @@ blocks:
           - export "PATH=$(go env GOPATH)/bin:${PATH}"
           - mkdir -vp "${SEMAPHORE_GIT_DIR}" "$(go env GOPATH)/bin"
           # Dep install db
-          - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
           - checkout
       jobs:
-        - name: Dep ensure
+        - name: Go Mod Download
           commands:
             - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum Gopkg.lock),deps-$SEMAPHORE_GIT_BRANCH,deps-master
-            - dep ensure
+            - go mod download
             - cache store deps-$SEMAPHORE_GIT_BRANCH-$(checksum Gopkg.lock) vendor
   - name: "Unit tests"
     task:
@@ -33,10 +32,9 @@ blocks:
           - export "PATH=$(go env GOPATH)/bin:${PATH}"
           - mkdir -vp "${SEMAPHORE_GIT_DIR}" "$(go env GOPATH)/bin"
           # Dep install db
-          - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
           - checkout
           - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum Gopkg.lock),deps-$SEMAPHORE_GIT_BRANCH,deps-master
-          - dep ensure
+          - go mod download
       jobs:
         - name: Suite
           commands:

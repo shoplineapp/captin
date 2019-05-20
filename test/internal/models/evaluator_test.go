@@ -4,7 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 
-	. "github.com/shoplineapp/captin/internal/models"
+	. "captin/internal/models"
 )
 
 func tuples(args ...interface{}) []interface{} {
