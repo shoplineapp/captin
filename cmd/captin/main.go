@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 
 	core "github.com/shoplineapp/captin/core"
+	stores "github.com/shoplineapp/captin/internal/stores"
 	models "github.com/shoplineapp/captin/models"
-	interfaces "github.com/shoplineapp/captin/interfaces"
 )
 
 func main() {
@@ -19,8 +19,8 @@ func main() {
 	absPath := filepath.Join(pwd, path)
 
 	configMapper := models.NewConfigurationMapperFromPath(absPath)
-
-	captin := core.NewCaptin(*configMapper)
+	store := stores.NewMemoryStore()
+	captin := core.NewCaptin(*configMapper, store)
 	captin.Execute(models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",

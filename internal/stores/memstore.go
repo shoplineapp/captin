@@ -1,6 +1,7 @@
-package store
+package stores
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -43,24 +44,50 @@ func NewMemoryStore() *MemoryStore {
 }
 
 // Get - Get value from store, return with remaining time
-func (ms *MemoryStore) Get(key string) (string, time.Duration, error) {
+func (ms *MemoryStore) Get(key string) (string, bool, time.Duration, error) {
 	ms.lock.Lock()
 	defer ms.lock.Unlock()
+	fmt.Println("[Memstore] Get Key: ", key)
 	if it, ok := ms.m[key]; ok {
-		return it.value, time.Since(it.createDate), nil
+		return it.value, true, time.Since(it.createDate), nil
 	}
-	return "", 0, nil
+	return "", false, 0, nil
 }
 
 // Set - Set value into store with ttl
 func (ms *MemoryStore) Set(key string, value string, ttl time.Duration) (bool, error) {
 	ms.lock.Lock()
 	it, ok := ms.m[key]
+	fmt.Println("[Memstore] Set Value: ", value, ", Key: ", key)
 	if !ok {
 		it = &item{value: value}
 		ms.m[key] = it
 	}
 	it.createDate = time.Now()
+	it.ttl = ttl
+	ms.lock.Unlock()
+	return true, nil
+}
+
+// Update - Update value into store
+func (ms *MemoryStore) Update(key string, value string) (bool, error) {
+	ms.lock.Lock()
+	defer ms.lock.Unlock()
+
+	fmt.Println("[Memstore] Update Value: ", value, ", Key: ", key)
+	it, ok := ms.m[key]
+	if !ok {
+		return false, nil
+	}
+	it.value = value
+	ms.m[key] = it
+	return true, nil
+}
+
+// Remove - Remove value in store
+func (ms *MemoryStore) Remove(key string) (bool, error) {
+	ms.lock.Lock()
+	delete(ms.m, key)
 	ms.lock.Unlock()
 	return true, nil
 }

@@ -9,6 +9,7 @@ import (
 
 	core "github.com/shoplineapp/captin/core"
 	incoming "github.com/shoplineapp/captin/incoming"
+	stores "github.com/shoplineapp/captin/internal/stores"
 	models "github.com/shoplineapp/captin/models"
 )
 
@@ -21,8 +22,8 @@ func main() {
 	path := os.Args[1:][0]
 	absPath := filepath.Join(pwd, path)
 	configMapper := models.NewConfigurationMapperFromPath(absPath)
-
-	captin := core.NewCaptin(*configMapper)
+	store := stores.NewMemoryStore()
+	captin := core.NewCaptin(*configMapper, store)
 
 	// Set up api server
 	router := gin.Default()

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
+	stores "github.com/shoplineapp/captin/internal/stores"
 	models "github.com/shoplineapp/captin/models"
 	"github.com/stretchr/testify/mock"
 )
@@ -24,6 +25,7 @@ func (s *senderMock) SendEvent(e models.IncomingEvent, d models.Destination) err
 }
 
 func TestDispatchEvents_Error(t *testing.T) {
+	store := stores.NewMemoryStore()
 	data, err := ioutil.ReadFile("fixtures/config.json")
 	if err != nil {
 		panic(err)
@@ -47,7 +49,7 @@ func TestDispatchEvents_Error(t *testing.T) {
 		Payload:    map[string]interface{}{"field1": 1},
 		TargetType: "Product",
 		TargetId:   "product_id",
-	})
+	}, store)
 
 	dispatcher.Dispatch(models.IncomingEvent{
 		Key:        "product.update",
@@ -55,7 +57,7 @@ func TestDispatchEvents_Error(t *testing.T) {
 		Payload:    map[string]interface{}{"field1": 2},
 		TargetType: "Product",
 		TargetId:   "product_id_2",
-	})
+	}, store)
 
 	time.Sleep(50 * time.Millisecond)
 
@@ -64,6 +66,7 @@ func TestDispatchEvents_Error(t *testing.T) {
 }
 
 func TestDispatchEvents(t *testing.T) {
+	store := stores.NewMemoryStore()
 	data, err := ioutil.ReadFile("fixtures/config.json")
 	if err != nil {
 		panic(err)
@@ -87,7 +90,7 @@ func TestDispatchEvents(t *testing.T) {
 		Payload:    map[string]interface{}{"field1": 1},
 		TargetType: "Product",
 		TargetId:   "product_id",
-	})
+	}, store)
 
 	dispatcher.Dispatch(models.IncomingEvent{
 		Key:        "product.update",
@@ -95,7 +98,7 @@ func TestDispatchEvents(t *testing.T) {
 		Payload:    map[string]interface{}{"field1": 2},
 		TargetType: "Product",
 		TargetId:   "product_id_2",
-	})
+	}, store)
 
 	time.Sleep(50 * time.Millisecond)
 

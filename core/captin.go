@@ -7,7 +7,6 @@ import (
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	outgoing_filters "github.com/shoplineapp/captin/internal/outgoing/filters"
 	senders "github.com/shoplineapp/captin/internal/senders"
-	throttle "github.com/shoplineapp/captin/internal/throttle"
 	models "github.com/shoplineapp/captin/models"
 )
 
@@ -25,12 +24,11 @@ type Captin struct {
 	ConfigMap interfaces.ConfigMapperInterface
 	filters   []interfaces.CustomFilter
 	sender    interfaces.EventSenderInterface
-	throttler interfaces.ThrottleInterface
+	store     interfaces.StoreInterface
 }
 
 // NewCaptin - Create Captin instance with default http senders and time throttler
-func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
-	t, _ := throttle.NewMemstoreThrottle()
+func NewCaptin(configMap interfaces.ConfigMapperInterface, store interfaces.StoreInterface) *Captin {
 	c := Captin{
 		ConfigMap: configMap,
 		filters: []interfaces.DestinationFilter{
@@ -40,6 +38,8 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 		middlewares: []interfaces.DestinationMiddleware{},
 		sender:    &senders.HTTPEventSender{},
 		throttler: t,
+		sender: &senders.HTTPEventSender{},
+		store:  store,
 	}
 	return &c
 }
@@ -71,7 +71,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 
 	// Create dispatcher and dispatch events
 	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, c.sender)
-	dispatcher.Dispatch(e, c.throttler)
+	dispatcher.Dispatch(e, c.store)
 
 	for _, err := range dispatcher.Errors {
 		switch dispatcherErr := err.(type) {

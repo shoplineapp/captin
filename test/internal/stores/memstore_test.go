@@ -1,16 +1,16 @@
-package store_test
+package stores_test
 
 import (
 	"fmt"
 	"testing"
 	"time"
 
-	store "github.com/shoplineapp/captin/internal/store"
+	stores "github.com/shoplineapp/captin/internal/stores"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestStoreWithTTL(t *testing.T) {
-	ms := store.NewMemoryStore()
+	ms := stores.NewMemoryStore()
 	for i := 0; i < 10000; i++ {
 		k, v := fmt.Sprint("key", i), fmt.Sprint("value", i)
 		result, err := ms.Set(k, v, 200*time.Millisecond)

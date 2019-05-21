@@ -31,6 +31,6 @@ type ConfigMapperInterface interface {
 // Events:				x x x x -
 // Throttle: 			  t     t2
 type ThrottleInterface interface {
-	// CanTrigger() - Check if can trigger
+	// CanTrigger - Check if can trigger
 	CanTrigger(id string) (bool, time.Duration, error)
 }
