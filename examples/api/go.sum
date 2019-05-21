@@ -20,10 +20,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/robertkrimen/otto v0.0.0-20180617131154-15f95af6e78d h1:1VUlQbCfkoSGv7qP7Y+ro3ap1P1pPZxgdGVqiTVy5C4=
 github.com/robertkrimen/otto v0.0.0-20180617131154-15f95af6e78d/go.mod h1:xvqspoSXJTIpemEonrMDFq6XzwHYYgToXWj5eRX1OtY=
-github.com/shoplineapp/captin v0.0.0-20190521031154-4089381bf287 h1:jvH7Bxxg/Y7GPyvYUKp0GlXprKmzQhxGqr+bWUxBvqM=
-github.com/shoplineapp/captin v0.0.0-20190521031154-4089381bf287/go.mod h1:Gf1/Ghs/t2ajyV4+68hQYvhfV+yDuFNMp8SJUVHefRc=
-github.com/shoplineapp/captin v0.0.0-20190521040418-9b4a7ae393b3 h1:c7x9Ug/EFtMyxcWacN3V2ccFhns04B9bHBhS4kpztWw=
-github.com/shoplineapp/captin v0.0.0-20190521040418-9b4a7ae393b3/go.mod h1:Gf1/Ghs/t2ajyV4+68hQYvhfV+yDuFNMp8SJUVHefRc=
+github.com/shoplineapp/captin v0.0.0-20190521082037-f1b4b2653236 h1:pAMZxPDSA+3YYejRh+loFNu84E+IdEGJwskO+xZA9HA=
+github.com/shoplineapp/captin v0.0.0-20190521082037-f1b4b2653236/go.mod h1:Gf1/Ghs/t2ajyV4+68hQYvhfV+yDuFNMp8SJUVHefRc=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=

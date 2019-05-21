@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	incoming "example-api/incoming"
 	core "github.com/shoplineapp/captin/core"
-	incoming "github.com/shoplineapp/captin/incoming"
 	models "github.com/shoplineapp/captin/models"
 )
 
