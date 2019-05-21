@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	. "github.com/shoplineapp/captin/incoming"
 	interfaces "github.com/shoplineapp/captin/interfaces"
-	incoming "github.com/shoplineapp/captin/internal/incoming"
 	models "github.com/shoplineapp/captin/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -30,7 +30,7 @@ func TestHttpEventHandler_SetRoutes(t *testing.T) {
 	captin := new(captinMock)
 	captin.On("Execute", mock.Anything).Return(true, nil)
 
-	handler := incoming.HttpEventHandler{}
+	handler := HttpEventHandler{}
 	handler.Setup(captin)
 	handler.SetRoutes(router)
 

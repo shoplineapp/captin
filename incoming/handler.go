@@ -1,11 +1,11 @@
 package incoming
 
 import (
+	core "github.com/shoplineapp/captin/core"
 	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/internal/models"
 )
 
 type Handler interface {
-	SetConfigMapper(configMapper *models.ConfigurationMapper)
+	SetConfigMapper(configMapper *core.ConfigurationMapper)
 	Setup(c interfaces.CaptinInterface)
 }
