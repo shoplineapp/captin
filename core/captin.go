@@ -19,8 +19,9 @@ func (e *ExecutionError) Error() string {
 }
 
 type Captin struct {
-	ConfigMap interfaces.ConfigMapperInterface
-	filters   []interfaces.CustomFilter
+	ConfigMap   interfaces.ConfigMapperInterface
+	filters     []interfaces.CustomFilter
+	middlewares []interfaces.CustomMiddleware
 }
 
 func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
@@ -30,8 +31,17 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 			outgoing_filters.ValidateFilter{},
 			outgoing_filters.SourceFilter{},
 		},
+		middlewares: []interfaces.CustomMiddleware{},
 	}
 	return &c
+}
+
+func (c *Captin) SetCustomFilters(filters []interfaces.CustomFilter) {
+	c.filters = filters
+}
+
+func (c *Captin) SetCustomMiddlewares(middlewares []interfaces.CustomMiddleware) {
+	c.middlewares = middlewares
 }
 
 func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
@@ -47,7 +57,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 		destinations = append(destinations, models.Destination{Config: config})
 	}
 
-	destinations = outgoing.Custom{}.Sift(e, c.filters, destinations)
+	destinations = outgoing.Custom{}.Sift(e, destinations, c.filters, c.middlewares)
 
 	// TODO: Pass event and destinations into dispatcher
 
