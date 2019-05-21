@@ -1,11 +1,11 @@
 package outgoing_filters
 
 import (
-	interfaces "captin/interfaces"
-	models "captin/internal/models"
 	"encoding/json"
 	"fmt"
 	"github.com/robertkrimen/otto"
+	interfaces "github.com/shoplineapp/captin/interfaces"
+	models "github.com/shoplineapp/captin/internal/models"
 )
 
 type ValidateFilter struct {

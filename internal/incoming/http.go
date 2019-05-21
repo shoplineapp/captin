@@ -1,9 +1,9 @@
 package incoming
 
 import (
-	interfaces "captin/interfaces"
-	models "captin/internal/models"
 	"github.com/gin-gonic/gin"
+	interfaces "github.com/shoplineapp/captin/interfaces"
+	models "github.com/shoplineapp/captin/internal/models"
 	"net/http"
 )
 
@@ -18,7 +18,7 @@ func (h *HttpEventHandler) Setup(c interfaces.CaptinInterface) {
 
 func (h HttpEventHandler) SetRoutes(router *gin.Engine) {
 	router.GET("/", func(c *gin.Context) {
-		c.String(200, "Captin aboard")
+		c.String(200, "github.com/shoplineapp/captin aboard")
 	})
 	router.POST("/api/events", func(c *gin.Context) {
 		h.HandleEventCreation(c)

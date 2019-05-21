@@ -3,9 +3,9 @@ package outgoing_test
 import (
 	"testing"
 
-	interfaces "captin/interfaces"
-	models "captin/internal/models"
-	. "captin/internal/outgoing"
+	interfaces "github.com/shoplineapp/captin/interfaces"
+	models "github.com/shoplineapp/captin/internal/models"
+	. "github.com/shoplineapp/captin/internal/outgoing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	core "captin/core"
-	incoming "captin/internal/incoming"
-	models "captin/internal/models"
+	core "github.com/shoplineapp/captin/core"
+	incoming "github.com/shoplineapp/captin/internal/incoming"
+	models "github.com/shoplineapp/captin/internal/models"
 )
 
 func main() {
