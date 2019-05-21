@@ -2,7 +2,7 @@ package outgoing
 
 import (
 	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/internal/models"
+	models "github.com/shoplineapp/captin/models"
 )
 
 // DispatcherError - Error when send events

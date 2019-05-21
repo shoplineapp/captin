@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/internal/models"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	outgoing_filters "github.com/shoplineapp/captin/internal/outgoing/filters"
 	senders "github.com/shoplineapp/captin/internal/senders"
+	models "github.com/shoplineapp/captin/models"
 )
 
 type ExecutionError struct {
