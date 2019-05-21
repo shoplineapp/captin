@@ -8,6 +8,7 @@ import (
 
 	core "github.com/shoplineapp/captin/core"
 	models "github.com/shoplineapp/captin/models"
+	interfaces "github.com/shoplineapp/captin/interfaces"
 )
 
 func main() {
@@ -19,7 +20,7 @@ func main() {
 
 	configMapper := models.NewConfigurationMapperFromPath(absPath)
 
-	captin := core.NewCaptin(*mappedConfigs)
+	captin := core.NewCaptin(*configMapper)
 	captin.Execute(models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",

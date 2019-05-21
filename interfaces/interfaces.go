@@ -3,7 +3,7 @@ package interfaces
 import (
 	"time"
 
-	models "github.com/shoplineapp/captin/internal/models"
+	models "github.com/shoplineapp/captin/models"
 )
 
 // CaptinInterface
@@ -22,8 +22,6 @@ type IncomingHandler interface {
 }
 
 type ConfigMapperInterface interface {
-	NewConfigurationMapper(configs []models.Configuration) *ConfigMapperInterface
-	NewConfigurationMapperFromPath(path string) *ConfigMapperInterface
 	ConfigsForKey(eventKey string) []models.Configuration
 }
 // ThrottleInterface - interface for a throttle object
