@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	helpers "github.com/shoplineapp/captin/internal/helpers"
-	models "github.com/shoplineapp/captin/internal/models"
 	. "github.com/shoplineapp/captin/internal/outgoing/filters"
+	models "github.com/shoplineapp/captin/models"
 )
 
 func TestSourceFilterRunValidate(t *testing.T) {

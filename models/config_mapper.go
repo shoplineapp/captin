@@ -1,24 +1,20 @@
-package core
+package models
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/internal/models"
 )
 
 // ConfigurationMapper - Action to configuration mapper
 type ConfigurationMapper struct {
-	interfaces.ConfigMapperInterface
-	ActionMap map[string][]models.Configuration
+	ActionMap map[string][]Configuration
 }
 
 // NewConfigurationMapper - Create ConfigurationMapper with array of Configurations
-func NewConfigurationMapper(configs []models.Configuration) *ConfigurationMapper {
+func NewConfigurationMapper(configs []Configuration) *ConfigurationMapper {
 	result := ConfigurationMapper{
-		ActionMap: make(map[string][]models.Configuration),
+		ActionMap: make(map[string][]Configuration),
 	}
 	for _, config := range configs {
 		for _, action := range config.Actions {
@@ -40,12 +36,12 @@ func NewConfigurationMapperFromPath(path string) *ConfigurationMapper {
 		panic(err)
 	}
 
-	configs := []models.Configuration{}
+	configs := []Configuration{}
 	json.Unmarshal(data, &configs)
 
 	return NewConfigurationMapper(configs)
 }
 
-func (cm ConfigurationMapper) ConfigsForKey(eventKey string) []models.Configuration {
+func (cm ConfigurationMapper) ConfigsForKey(eventKey string) []Configuration {
 	return cm.ActionMap[eventKey]
 }

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	. "github.com/shoplineapp/captin/core"
-	models "github.com/shoplineapp/captin/internal/models"
+	models "github.com/shoplineapp/captin/models"
 )
 
 func TestExecute(t *testing.T) {

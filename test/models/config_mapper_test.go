@@ -7,28 +7,27 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/shoplineapp/captin/core"
-	models "github.com/shoplineapp/captin/internal/models"
+	. "github.com/shoplineapp/captin/models"
 )
 
-func setup() []models.Configuration {
-	result := []models.Configuration{}
+func setup() []Configuration {
+	result := []Configuration{}
 	for i := 0; i < 3; i++ {
 		switch i {
 		case 0:
-			val := models.Configuration{
+			val := Configuration{
 				Name:    "0",
 				Actions: []string{"action:0", "action:2"},
 			}
 			result = append(result, val)
 		case 1:
-			val := models.Configuration{
+			val := Configuration{
 				Name:    "1",
 				Actions: []string{"action:1", "action:0", "action:3"},
 			}
 			result = append(result, val)
 		case 2:
-			val := models.Configuration{
+			val := Configuration{
 				Name:    "2",
 				Actions: []string{"action:0", "action:2", "action:3"},
 			}
@@ -39,7 +38,7 @@ func setup() []models.Configuration {
 	return result
 }
 
-func getNames(configs []models.Configuration) []string {
+func getNames(configs []Configuration) []string {
 	result := []string{}
 	for _, config := range configs {
 		result = append(result, config.Name)

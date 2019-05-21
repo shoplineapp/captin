@@ -1,7 +1,7 @@
 package interfaces
 
 import (
-	models "github.com/shoplineapp/captin/internal/models"
+	models "github.com/shoplineapp/captin/models"
 )
 
 // CustomMiddleware - Interface for third-party application to add extra handling on destinations

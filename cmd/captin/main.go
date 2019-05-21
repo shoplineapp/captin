@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	core "github.com/shoplineapp/captin/core"
-	models "github.com/shoplineapp/captin/internal/models"
+	models "github.com/shoplineapp/captin/models"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 	path := os.Args[1:][0]
 	absPath := filepath.Join(pwd, path)
 
-	mappedConfigs := models.NewConfigurationMapperFromPath(absPath)
+	configMapper := models.NewConfigurationMapperFromPath(absPath)
 
 	captin := core.NewCaptin(*configMapper)
 	captin.Execute(models.IncomingEvent{

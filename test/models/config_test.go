@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/shoplineapp/captin/internal/models"
+	. "github.com/shoplineapp/captin/models"
 )
 
 func TestDecodeConfigurationJson(t *testing.T) {

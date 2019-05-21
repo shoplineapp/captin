@@ -3,7 +3,7 @@ package incoming
 import (
 	"github.com/gin-gonic/gin"
 	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/internal/models"
+	models "github.com/shoplineapp/captin/models"
 	"net/http"
 )
 
