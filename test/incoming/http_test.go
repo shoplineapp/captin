@@ -9,7 +9,7 @@ import (
 
 	. "github.com/shoplineapp/captin/incoming"
 	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/internal/models"
+	models "github.com/shoplineapp/captin/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

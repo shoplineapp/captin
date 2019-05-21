@@ -5,7 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 
-	. "github.com/shoplineapp/captin/internal/models"
+	. "github.com/shoplineapp/captin/models"
 )
 
 func TestNewIncomingEvent(t *testing.T) {

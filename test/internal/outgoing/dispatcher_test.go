@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	models "github.com/shoplineapp/captin/internal/models"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
+	models "github.com/shoplineapp/captin/models"
 	"github.com/stretchr/testify/mock"
 )
 
