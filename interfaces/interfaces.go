@@ -4,13 +4,13 @@ import (
 	models "github.com/shoplineapp/captin/models"
 )
 
-// CustomMiddleware - Interface for third-party application to add extra handling on destinations
-type CustomMiddleware interface {
+// DestinationMiddleware - Interface for third-party application to add extra handling on destinations
+type DestinationMiddleware interface {
 	Apply(e models.IncomingEvent, d []models.Destination) (models.IncomingEvent, []models.Destination)
 }
 
-// CustomFilter - Interface for third-party application to filter destination by event
-type CustomFilter interface {
+// DestinationFilter - Interface for third-party application to filter destination by event
+type DestinationFilter interface {
 	Run(e models.IncomingEvent, c models.Destination) (bool, error)
 	Applicable(e models.IncomingEvent, c models.Destination) bool
 }

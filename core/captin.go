@@ -19,19 +19,29 @@ func (e *ExecutionError) Error() string {
 }
 
 type Captin struct {
-	ConfigMap interfaces.ConfigMapperInterface
-	filters   []interfaces.CustomFilter
+	ConfigMap   interfaces.ConfigMapperInterface
+	filters     []interfaces.DestinationFilter
+	middlewares []interfaces.DestinationMiddleware
 }
 
 func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 	c := Captin{
 		ConfigMap: configMap,
-		filters: []interfaces.CustomFilter{
+		filters: []interfaces.DestinationFilter{
 			outgoing_filters.ValidateFilter{},
 			outgoing_filters.SourceFilter{},
 		},
+		middlewares: []interfaces.DestinationMiddleware{},
 	}
 	return &c
+}
+
+func (c *Captin) SetDestinationFilters(filters []interfaces.DestinationFilter) {
+	c.filters = filters
+}
+
+func (c *Captin) SetDestinationMiddlewares(middlewares []interfaces.DestinationMiddleware) {
+	c.middlewares = middlewares
 }
 
 func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
@@ -47,7 +57,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 		destinations = append(destinations, models.Destination{Config: config})
 	}
 
-	destinations = outgoing.Custom{}.Sift(e, c.filters, destinations)
+	destinations = outgoing.Custom{}.Sift(e, destinations, c.filters, c.middlewares)
 
 	// TODO: Pass event and destinations into dispatcher
 
