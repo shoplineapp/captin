@@ -20,27 +20,27 @@ func (e *ExecutionError) Error() string {
 
 type Captin struct {
 	ConfigMap   interfaces.ConfigMapperInterface
-	filters     []interfaces.CustomFilter
-	middlewares []interfaces.CustomMiddleware
+	filters     []interfaces.DestinationFilter
+	middlewares []interfaces.DestinationMiddleware
 }
 
 func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 	c := Captin{
 		ConfigMap: configMap,
-		filters: []interfaces.CustomFilter{
+		filters: []interfaces.DestinationFilter{
 			outgoing_filters.ValidateFilter{},
 			outgoing_filters.SourceFilter{},
 		},
-		middlewares: []interfaces.CustomMiddleware{},
+		middlewares: []interfaces.DestinationMiddleware{},
 	}
 	return &c
 }
 
-func (c *Captin) SetCustomFilters(filters []interfaces.CustomFilter) {
+func (c *Captin) SetDestinationFilters(filters []interfaces.DestinationFilter) {
 	c.filters = filters
 }
 
-func (c *Captin) SetCustomMiddlewares(middlewares []interfaces.CustomMiddleware) {
+func (c *Captin) SetDestinationMiddlewares(middlewares []interfaces.DestinationMiddleware) {
 	c.middlewares = middlewares
 }
 

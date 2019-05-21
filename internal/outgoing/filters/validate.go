@@ -9,7 +9,7 @@ import (
 )
 
 type ValidateFilter struct {
-	interfaces.CustomFilter
+	interfaces.DestinationFilter
 }
 
 func (f ValidateFilter) Run(e models.IncomingEvent, d models.Destination) (bool, error) {

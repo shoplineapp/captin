@@ -6,7 +6,7 @@ import (
 )
 
 type SourceFilter struct {
-	interfaces.CustomFilter
+	interfaces.DestinationFilter
 }
 
 func (f SourceFilter) Run(e models.IncomingEvent, d models.Destination) (bool, error) {
