@@ -1,4 +1,4 @@
-module captin
+module github.com/shoplineapp/captin
 
 go 1.12
 
