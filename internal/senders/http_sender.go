@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	models "captin/internal/models"
+	models "github.com/shoplineapp/captin/internal/models"
 )
 
 // HTTPResponse - HTTP Response

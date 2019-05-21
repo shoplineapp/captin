@@ -3,7 +3,7 @@ package senders
 import (
 	"fmt"
 
-	models "captin/internal/models"
+	models "github.com/shoplineapp/captin/internal/models"
 )
 
 // ConsoleEventSender - Present Event in console
