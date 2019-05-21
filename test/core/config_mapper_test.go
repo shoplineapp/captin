@@ -1,31 +1,34 @@
 package models_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/shoplineapp/captin/internal/models"
+	. "github.com/shoplineapp/captin/core"
+	models "github.com/shoplineapp/captin/internal/models"
 )
 
-func setup() []Configuration {
-	result := []Configuration{}
+func setup() []models.Configuration {
+	result := []models.Configuration{}
 	for i := 0; i < 3; i++ {
 		switch i {
 		case 0:
-			val := Configuration{
+			val := models.Configuration{
 				Name:    "0",
 				Actions: []string{"action:0", "action:2"},
 			}
 			result = append(result, val)
 		case 1:
-			val := Configuration{
+			val := models.Configuration{
 				Name:    "1",
 				Actions: []string{"action:1", "action:0", "action:3"},
 			}
 			result = append(result, val)
 		case 2:
-			val := Configuration{
+			val := models.Configuration{
 				Name:    "2",
 				Actions: []string{"action:0", "action:2", "action:3"},
 			}
@@ -36,7 +39,7 @@ func setup() []Configuration {
 	return result
 }
 
-func getNames(configs []Configuration) []string {
+func getNames(configs []models.Configuration) []string {
 	result := []string{}
 	for _, config := range configs {
 		result = append(result, config.Name)
@@ -73,7 +76,10 @@ func TestMapActionToConfig(t *testing.T) {
 }
 
 func TestReadLocalFile(t *testing.T) {
-	subject := NewConfigurationMapperFromPath("fixtures/config_list.json")
+	pwd, _ := os.Getwd()
+	absPath := filepath.Join(pwd, "fixtures/config_list.json")
+
+	subject := NewConfigurationMapperFromPath(absPath)
 	action := subject.ActionMap["product.update"]
 	assert.Equal(t, 2, len(action))
 	names := getNames(action)
