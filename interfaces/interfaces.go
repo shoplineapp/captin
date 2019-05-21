@@ -16,14 +16,6 @@ type EventSenderInterface interface {
 	SendEvent(e models.IncomingEvent, d models.Destination) error
 }
 
-type IncomingHandler interface {
-	SetConfigMapper(configMapper *ConfigMapperInterface)
-	Setup(c CaptinInterface)
-}
-
-type ConfigMapperInterface interface {
-	ConfigsForKey(eventKey string) []models.Configuration
-}
 // ThrottleInterface - interface for a throttle object
 // Throttle event flow:
 // Mutex Lock:		1

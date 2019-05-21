@@ -21,10 +21,11 @@ func (e *ExecutionError) Error() string {
 
 // Captin - Captin instance
 type Captin struct {
-	ConfigMap interfaces.ConfigMapperInterface
-	filters   []interfaces.CustomFilter
-	sender    interfaces.EventSenderInterface
-	store     interfaces.StoreInterface
+	ConfigMap   interfaces.ConfigMapperInterface
+	filters     []interfaces.DestinationFilter
+	middlewares []interfaces.DestinationMiddleware
+	sender      interfaces.EventSenderInterface
+	store       interfaces.StoreInterface
 }
 
 // NewCaptin - Create Captin instance with default http senders and time throttler
@@ -35,9 +36,6 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface, store interfaces.Stor
 			outgoing_filters.ValidateFilter{},
 			outgoing_filters.SourceFilter{},
 		},
-		middlewares: []interfaces.DestinationMiddleware{},
-		sender:    &senders.HTTPEventSender{},
-		throttler: t,
 		sender: &senders.HTTPEventSender{},
 		store:  store,
 	}
