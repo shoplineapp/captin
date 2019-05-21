@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println("Starting in port:", os.Getenv("CAPTIN_PORT"))
-	port := fmt.Sprintf(":%s", os.Getenv("CAPTIN_PORT"))
+	fmt.Println("Starting in port:", getEnv("CAPTIN_PORT", "3000"))
+	port := fmt.Sprintf(":%s", getEnv("CAPTIN_PORT", "3000"))
 
 	// Load webhooks configuration
 	pwd, _ := os.Getwd()
@@ -32,4 +32,12 @@ func main() {
 
 	fmt.Printf("* Binding captin on 0.0.0.0%s\n", port)
 	router.Run(port)
+}
+
+func getEnv(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return defaultValue
+	}
+	return value
 }

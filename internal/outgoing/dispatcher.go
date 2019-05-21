@@ -35,7 +35,7 @@ func NewDispatcherWithDestinations(destinations []models.Destination, sender int
 }
 
 // Dispatch - Dispatch an event to outgoing webhook
-func (d *Dispatcher) Dispatch(e models.IncomingEvent) error {
+func (d *Dispatcher) Dispatch(e models.IncomingEvent, throttler interfaces.ThrottleInterface) error {
 	for _, destination := range d.destinations {
 		go func(evt models.IncomingEvent, destination models.Destination) {
 			err := d.sender.SendEvent(evt, destination)

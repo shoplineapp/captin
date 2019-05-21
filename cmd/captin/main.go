@@ -19,7 +19,7 @@ func main() {
 
 	configMapper := models.NewConfigurationMapperFromPath(absPath)
 
-	captin := core.NewCaptin(*configMapper)
+	captin := core.NewCaptin(*mappedConfigs)
 	captin.Execute(models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",

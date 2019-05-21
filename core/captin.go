@@ -7,9 +7,11 @@ import (
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	outgoing_filters "github.com/shoplineapp/captin/internal/outgoing/filters"
 	senders "github.com/shoplineapp/captin/internal/senders"
+	throttle "github.com/shoplineapp/captin/internal/throttle"
 	models "github.com/shoplineapp/captin/models"
 )
 
+// ExecutionError - Error on executing events
 type ExecutionError struct {
 	Cause string
 }
@@ -18,13 +20,17 @@ func (e *ExecutionError) Error() string {
 	return fmt.Sprintf("ExecutionError: caused by %s", e.Cause)
 }
 
+// Captin - Captin instance
 type Captin struct {
-	ConfigMap   interfaces.ConfigMapperInterface
-	filters     []interfaces.DestinationFilter
-	middlewares []interfaces.DestinationMiddleware
+	ConfigMap interfaces.ConfigMapperInterface
+	filters   []interfaces.CustomFilter
+	sender    interfaces.EventSenderInterface
+	throttler interfaces.ThrottleInterface
 }
 
+// NewCaptin - Create Captin instance with default http senders and time throttler
 func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
+	t, _ := throttle.NewMemstoreThrottle()
 	c := Captin{
 		ConfigMap: configMap,
 		filters: []interfaces.DestinationFilter{
@@ -32,6 +38,8 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 			outgoing_filters.SourceFilter{},
 		},
 		middlewares: []interfaces.DestinationMiddleware{},
+		sender:    &senders.HTTPEventSender{},
+		throttler: t,
 	}
 	return &c
 }
@@ -62,9 +70,8 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 	// TODO: Pass event and destinations into dispatcher
 
 	// Create dispatcher and dispatch events
-	sender := senders.HTTPEventSender{}
-	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, &sender)
-	dispatcher.Dispatch(e)
+	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, c.sender)
+	dispatcher.Dispatch(e, c.throttler)
 
 	for _, err := range dispatcher.Errors {
 		switch dispatcherErr := err.(type) {
@@ -77,4 +84,10 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// Private functions
+
+func generateKey(e models.IncomingEvent, d models.Destination) string {
+	return fmt.Sprintf("%s.%s.%s", e.TargetType, e.TargetId, d.Config.Name)
 }
