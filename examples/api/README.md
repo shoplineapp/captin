@@ -3,7 +3,7 @@
 Start captin with api trigger
 
 ```sh
-go run main.go hooks.json
+go run main.go
 ```
 
 Test with an api call

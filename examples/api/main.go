@@ -8,13 +8,14 @@ import (
 
 	core "github.com/shoplineapp/captin/core"
 	incoming "github.com/shoplineapp/captin/incoming"
+	models "github.com/shoplineapp/captin/models"
 )
 
 func main() {
 	port := ":8080"
 
 	pwd, _ := os.Getwd()
-	configMapper := core.NewConfigurationMapperFromPath(filepath.Join(pwd, "hooks.json"))
+	configMapper := models.NewConfigurationMapperFromPath(filepath.Join(pwd, "hooks.json"))
 
 	captin := core.NewCaptin(*configMapper)
 
