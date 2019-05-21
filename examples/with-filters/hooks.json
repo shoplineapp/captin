@@ -1,0 +1,12 @@
+[
+  {
+    "callback_url": "http://localhost:8080/callback",
+    "actions": [
+      "custom"
+    ],
+    "source": "service_one",
+    "name": "callback_to_service_two",
+    "include_document": false,
+    "allow_loopback": true
+  }
+]
