@@ -2,6 +2,7 @@ package senders
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -35,7 +36,14 @@ func (c *HTTPEventSender) SendEvent(e models.IncomingEvent, d models.Destination
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	client := &http.Client{
+		Transport: tr,
+	}
+
 	res, err := client.Do(req)
 	if err != nil {
 		return err
