@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/internal/models"
 )
 
 // ConfigurationMapper - Action to configuration mapper
 type ConfigurationMapper struct {
+	interfaces.ConfigMapperInterface
 	ActionMap map[string][]models.Configuration
 }
 

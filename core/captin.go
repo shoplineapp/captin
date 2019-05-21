@@ -19,11 +19,11 @@ func (e *ExecutionError) Error() string {
 }
 
 type Captin struct {
-	ConfigMap ConfigurationMapper
+	ConfigMap interfaces.ConfigMapperInterface
 	filters   []interfaces.CustomFilter
 }
 
-func NewCaptin(configMap ConfigurationMapper) *Captin {
+func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 	c := Captin{
 		ConfigMap: configMap,
 		filters: []interfaces.CustomFilter{
