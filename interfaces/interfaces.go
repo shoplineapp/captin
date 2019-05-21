@@ -1,4 +1,4 @@
-package core
+package interfaces
 
 import (
 	models "github.com/shoplineapp/captin/internal/models"
@@ -23,4 +23,15 @@ type CaptinInterface interface {
 // EventSenderInterface - Event Sender Interface
 type EventSenderInterface interface {
 	SendEvent(e models.IncomingEvent, d models.Destination) error
+}
+
+type IncomingHandler interface {
+	SetConfigMapper(configMapper *ConfigMapperInterface)
+	Setup(c CaptinInterface)
+}
+
+type ConfigMapperInterface interface {
+	NewConfigurationMapper(configs []models.Configuration) *ConfigMapperInterface
+	NewConfigurationMapperFromPath(path string) *ConfigMapperInterface
+	ConfigsForKey(eventKey string) []models.Configuration
 }
