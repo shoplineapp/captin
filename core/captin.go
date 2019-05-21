@@ -3,11 +3,11 @@ package core
 import (
 	"fmt"
 
-	interfaces "captin/interfaces"
-	models "captin/internal/models"
-	outgoing "captin/internal/outgoing"
-	outgoing_filters "captin/internal/outgoing/filters"
-	senders "captin/internal/senders"
+	interfaces "github.com/shoplineapp/captin/interfaces"
+	models "github.com/shoplineapp/captin/internal/models"
+	outgoing "github.com/shoplineapp/captin/internal/outgoing"
+	outgoing_filters "github.com/shoplineapp/captin/internal/outgoing/filters"
+	senders "github.com/shoplineapp/captin/internal/senders"
 )
 
 type ExecutionError struct {

@@ -1,7 +1,7 @@
 package outgoing_filters
 
 import (
-	models "captin/internal/models"
+	models "github.com/shoplineapp/captin/internal/models"
 )
 
 type Filter interface {

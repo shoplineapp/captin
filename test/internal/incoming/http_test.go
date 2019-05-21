@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	interfaces "captin/interfaces"
-	incoming "captin/internal/incoming"
-	models "captin/internal/models"
+	interfaces "github.com/shoplineapp/captin/interfaces"
+	incoming "github.com/shoplineapp/captin/internal/incoming"
+	models "github.com/shoplineapp/captin/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
