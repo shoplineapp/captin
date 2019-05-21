@@ -8,7 +8,7 @@ import (
 )
 
 type HttpEventHandler struct {
-	Handler
+	interfaces.IncomingHandler
 	captin interfaces.CaptinInterface
 }
 

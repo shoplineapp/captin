@@ -8,7 +8,7 @@ import (
 type Custom struct{}
 
 // Sift - Custom check will filter ineligible destination
-func (c Custom) Sift(e models.IncomingEvent, filters []interfaces.CustomFilter, destinations []models.Destination) []models.Destination {
+func (c Custom) Sift(e models.IncomingEvent, destinations []models.Destination, filters []interfaces.CustomFilter, middlewares []interfaces.CustomMiddleware) []models.Destination {
 	sifted := []models.Destination{}
 	for _, destination := range destinations {
 		eligible := true
@@ -24,6 +24,9 @@ func (c Custom) Sift(e models.IncomingEvent, filters []interfaces.CustomFilter, 
 		if eligible {
 			sifted = append(sifted, destination)
 		}
+	}
+	for _, m := range middlewares {
+		e, sifted = m.Apply(e, sifted)
 	}
 	return sifted
 }
