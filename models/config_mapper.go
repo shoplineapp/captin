@@ -37,7 +37,10 @@ func NewConfigurationMapperFromPath(path string) *ConfigurationMapper {
 	}
 
 	configs := []Configuration{}
-	json.Unmarshal(data, &configs)
+	jsonErr := json.Unmarshal(data, &configs)
+	if jsonErr != nil {
+		panic(jsonErr)
+	}
 
 	return NewConfigurationMapper(configs)
 }

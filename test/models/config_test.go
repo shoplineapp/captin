@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -31,8 +32,8 @@ func TestDecodeConfigurationJson(t *testing.T) {
 func TestGetThrottle(t *testing.T) {
 	subject := Configuration{}
 	subject.Throttle = "50ms"
-	assert.Equal(t, subject.GetThrottleValue(), 50)
+	assert.Equal(t, subject.GetThrottleValue(), time.Duration(50)*time.Millisecond)
 
 	subject.Throttle = "50s"
-	assert.Equal(t, subject.GetThrottleValue(), 50000)
+	assert.Equal(t, subject.GetThrottleValue(), time.Duration(50)*time.Second)
 }
