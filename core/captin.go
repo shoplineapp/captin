@@ -9,6 +9,7 @@ import (
 	senders "github.com/shoplineapp/captin/internal/senders"
 	models "github.com/shoplineapp/captin/models"
 
+	stores "github.com/shoplineapp/captin/internal/stores"
 	throttles "github.com/shoplineapp/captin/internal/throttles"
 )
 
@@ -32,9 +33,8 @@ type Captin struct {
 }
 
 // NewCaptin - Create Captin instance with default http senders and time throttler
-func NewCaptin(
-	configMap interfaces.ConfigMapperInterface,
-	store interfaces.StoreInterface) *Captin {
+func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
+	store := stores.NewMemoryStore()
 	c := Captin{
 		ConfigMap: configMap,
 		filters: []interfaces.DestinationFilter{
@@ -46,6 +46,11 @@ func NewCaptin(
 		throttler: throttles.NewThrottler(store),
 	}
 	return &c
+}
+
+// SetStore - Set store
+func (c *Captin) SetStore(store interfaces.StoreInterface) {
+	c.store = store
 }
 
 // SetThrottler - Set throttle

@@ -22,8 +22,7 @@ func main() {
 	path := os.Args[1:][0]
 	absPath := filepath.Join(pwd, path)
 	configMapper := models.NewConfigurationMapperFromPath(absPath)
-	store := stores.NewMemoryStore()
-	captin := core.NewCaptin(*configMapper, store)
+	captin := core.NewCaptin(*configMapper)
 
 	// Set up api server
 	router := gin.Default()

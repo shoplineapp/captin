@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	core "github.com/shoplineapp/captin/core"
-	stores "github.com/shoplineapp/captin/internal/stores"
 	models "github.com/shoplineapp/captin/models"
 )
 
@@ -21,8 +20,7 @@ func main() {
 	absPath := filepath.Join(pwd, path)
 
 	configMapper := models.NewConfigurationMapperFromPath(absPath)
-	store := stores.NewMemoryStore()
-	captin := core.NewCaptin(*configMapper, store)
+	captin := core.NewCaptin(*configMapper)
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
