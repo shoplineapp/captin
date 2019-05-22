@@ -10,6 +10,7 @@ import (
 
 	core "github.com/shoplineapp/captin/core"
 	stores "github.com/shoplineapp/captin/internal/stores"
+	throttles "github.com/shoplineapp/captin/internal/throttles"
 	models "github.com/shoplineapp/captin/models"
 )
 
@@ -22,7 +23,9 @@ func main() {
 
 	configMapper := models.NewConfigurationMapperFromPath(absPath)
 	store := stores.NewMemoryStore()
-	captin := core.NewCaptin(*configMapper, store)
+	throttler := throttles.NewThrottler(store)
+	captin := core.NewCaptin(*configMapper, store, throttler)
+
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("> ")

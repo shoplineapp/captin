@@ -26,18 +26,23 @@ type Captin struct {
 	middlewares []interfaces.DestinationMiddleware
 	sender      interfaces.EventSenderInterface
 	store       interfaces.StoreInterface
+	throttler   interfaces.ThrottleInterface
 }
 
 // NewCaptin - Create Captin instance with default http senders and time throttler
-func NewCaptin(configMap interfaces.ConfigMapperInterface, store interfaces.StoreInterface) *Captin {
+func NewCaptin(
+	configMap interfaces.ConfigMapperInterface,
+	store interfaces.StoreInterface,
+	throttler interfaces.ThrottleInterface) *Captin {
 	c := Captin{
 		ConfigMap: configMap,
 		filters: []interfaces.DestinationFilter{
 			outgoing_filters.ValidateFilter{},
 			outgoing_filters.SourceFilter{},
 		},
-		sender: &senders.HTTPEventSender{},
-		store:  store,
+		sender:    &senders.HTTPEventSender{},
+		store:     store,
+		throttler: throttler,
 	}
 	return &c
 }
@@ -69,7 +74,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 
 	// Create dispatcher and dispatch events
 	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, c.sender)
-	dispatcher.Dispatch(e, c.store)
+	dispatcher.Dispatch(e, c.store, c.throttler)
 
 	for _, err := range dispatcher.Errors {
 		switch dispatcherErr := err.(type) {

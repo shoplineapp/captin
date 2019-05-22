@@ -6,7 +6,6 @@ import (
 	"time"
 
 	interfaces "github.com/shoplineapp/captin/interfaces"
-	throttles "github.com/shoplineapp/captin/internal/throttles"
 	models "github.com/shoplineapp/captin/models"
 )
 
@@ -44,10 +43,10 @@ func NewDispatcherWithDestinations(
 // Dispatch - Dispatch an event to outgoing webhook
 func (d *Dispatcher) Dispatch(
 	e models.IncomingEvent,
-	store interfaces.StoreInterface) error {
+	store interfaces.StoreInterface,
+	throttler interfaces.ThrottleInterface) error {
 
 	for _, destination := range d.destinations {
-		throttler := throttlerWithStore(store, destination)
 		canTrigger, timeRemain, err := throttler.CanTrigger(getEventKey(e, destination), destination.Config.GetThrottleValue())
 
 		if err != nil {
@@ -96,10 +95,6 @@ func (d *Dispatcher) Dispatch(
 }
 
 // Private Functions
-
-func throttlerWithStore(store interfaces.StoreInterface, dest models.Destination) interfaces.ThrottleInterface {
-	return throttles.NewThrottler(store)
-}
 
 func getEventKey(e models.IncomingEvent, d models.Destination) string {
 	return fmt.Sprintf("%s.%s.%s", e.Key, d.Config.Name, e.TargetId)
