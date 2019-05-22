@@ -51,6 +51,7 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 // SetStore - Set store
 func (c *Captin) SetStore(store interfaces.StoreInterface) {
 	c.store = store
+	c.throttler = throttles.NewThrottler(store)
 }
 
 // SetThrottler - Set throttle
