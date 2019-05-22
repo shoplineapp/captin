@@ -48,7 +48,7 @@ func (d *Dispatcher) Dispatch(
 
 	for _, destination := range d.destinations {
 		throttler := throttlerWithStore(store, destination)
-		canTrigger, timeRemain, err := throttler.CanTrigger(getEventKey(e, destination))
+		canTrigger, timeRemain, err := throttler.CanTrigger(getEventKey(e, destination), destination.Config.GetThrottleValue())
 
 		if err != nil {
 			fmt.Println("[Dispatcher] Error: ", err)
@@ -87,7 +87,7 @@ func (d *Dispatcher) Dispatch(
 					d.Errors = append(d.Errors, saveErr)
 				}
 
-				// Schdule send event later
+				// Schedule send event later
 				time.AfterFunc(timeRemain, d.sendAfterEvent(dataKey, store, destination))
 			}
 		}
@@ -98,7 +98,7 @@ func (d *Dispatcher) Dispatch(
 // Private Functions
 
 func throttlerWithStore(store interfaces.StoreInterface, dest models.Destination) interfaces.ThrottleInterface {
-	return throttles.NewThrottler(time.Millisecond*time.Duration(dest.Config.GetThrottleValue()), store)
+	return throttles.NewThrottler(store)
 }
 
 func getEventKey(e models.IncomingEvent, d models.Destination) string {

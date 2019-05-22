@@ -10,16 +10,17 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
-	stores "github.com/shoplineapp/captin/internal/stores"
 	models "github.com/shoplineapp/captin/models"
 	mocks "github.com/shoplineapp/captin/test/mocks"
 
 	"github.com/stretchr/testify/mock"
 )
 
-func TestDispatchEvents_Error(t *testing.T) {
-	store := stores.NewMemoryStore()
-	data, err := ioutil.ReadFile("fixtures/config.json")
+func setup(path string) (*mocks.StoreMock, *mocks.SenderMock, *outgoing.Dispatcher) {
+	store := new(mocks.StoreMock)
+	sender := new(mocks.SenderMock)
+
+	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}
@@ -30,11 +31,17 @@ func TestDispatchEvents_Error(t *testing.T) {
 		destinations = append(destinations, models.Destination{Config: config})
 	}
 
-	sender := new(mocks.SenderMock)
+	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, sender)
+
+	return store, sender, dispatcher
+}
+
+func TestDispatchEvents_Error(t *testing.T) {
+	store, sender, dispatcher := setup("fixtures/config.json")
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(errors.New("Mock Error"))
-
-	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, sender)
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
 	dispatcher.Dispatch(models.IncomingEvent{
 		Key:        "product.update",
@@ -59,23 +66,11 @@ func TestDispatchEvents_Error(t *testing.T) {
 }
 
 func TestDispatchEvents(t *testing.T) {
-	store := stores.NewMemoryStore()
-	data, err := ioutil.ReadFile("fixtures/config.json")
-	if err != nil {
-		panic(err)
-	}
-	configs := []models.Configuration{}
-	json.Unmarshal(data, &configs)
-	destinations := []models.Destination{}
-	for _, config := range configs {
-		destinations = append(destinations, models.Destination{Config: config})
-	}
-
-	sender := new(mocks.SenderMock)
+	store, sender, dispatcher := setup("fixtures/config.json")
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
-
-	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, sender)
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
 	dispatcher.Dispatch(models.IncomingEvent{
 		Key:        "product.update",

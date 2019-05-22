@@ -10,20 +10,18 @@ import (
 // Throttler - Event Throttler
 type Throttler struct {
 	interfaces.ThrottleInterface
-	store  interfaces.StoreInterface
-	period time.Duration
+	store interfaces.StoreInterface
 }
 
 // NewThrottler - Create new Throttler
-func NewThrottler(period time.Duration, store interfaces.StoreInterface) *Throttler {
+func NewThrottler(store interfaces.StoreInterface) *Throttler {
 	return &Throttler{
-		period: period,
-		store:  store,
+		store: store,
 	}
 }
 
 // CanTrigger - Check if can trigger
-func (t *Throttler) CanTrigger(id string) (bool, time.Duration, error) {
+func (t *Throttler) CanTrigger(id string, period time.Duration) (bool, time.Duration, error) {
 	val, ok, duration, err := t.store.Get(id)
 
 	if err != nil {
@@ -31,8 +29,8 @@ func (t *Throttler) CanTrigger(id string) (bool, time.Duration, error) {
 	}
 	fmt.Println("[Throttler] Value: ", val)
 	if !ok {
-		fmt.Println("[Throttler] Create throttle in store with period, ", t.period)
-		t.store.Set(id, "1", t.period)
+		fmt.Println("[Throttler] Create throttle in store with period, ", period)
+		t.store.Set(id, "1", period)
 		return true, time.Duration(0), nil
 	}
 

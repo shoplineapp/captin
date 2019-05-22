@@ -6,7 +6,7 @@ import (
 	models "github.com/shoplineapp/captin/models"
 )
 
-// CaptinInterface
+// CaptinInterface - Captin Interface
 type CaptinInterface interface {
 	Execute(e models.IncomingEvent) (bool, error)
 }
@@ -24,5 +24,5 @@ type EventSenderInterface interface {
 // Throttle: 			  t     t2
 type ThrottleInterface interface {
 	// CanTrigger - Check if can trigger
-	CanTrigger(id string) (bool, time.Duration, error)
+	CanTrigger(id string, period time.Duration) (bool, time.Duration, error)
 }
