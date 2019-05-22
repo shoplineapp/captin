@@ -1,0 +1,6 @@
+.semaphore/
+.vscode/
+build/
+nginx_config/
+
+README.md
