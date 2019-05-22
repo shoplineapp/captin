@@ -88,9 +88,3 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 
 	return true, nil
 }
-
-// Private functions
-
-func generateKey(e models.IncomingEvent, d models.Destination) string {
-	return fmt.Sprintf("%s.%s.%s", e.TargetType, e.TargetId, d.Config.Name)
-}
