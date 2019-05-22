@@ -8,6 +8,8 @@ import (
 	outgoing_filters "github.com/shoplineapp/captin/internal/outgoing/filters"
 	senders "github.com/shoplineapp/captin/internal/senders"
 	models "github.com/shoplineapp/captin/models"
+
+	throttles "github.com/shoplineapp/captin/internal/throttles"
 )
 
 // ExecutionError - Error on executing events
@@ -32,8 +34,7 @@ type Captin struct {
 // NewCaptin - Create Captin instance with default http senders and time throttler
 func NewCaptin(
 	configMap interfaces.ConfigMapperInterface,
-	store interfaces.StoreInterface,
-	throttler interfaces.ThrottleInterface) *Captin {
+	store interfaces.StoreInterface) *Captin {
 	c := Captin{
 		ConfigMap: configMap,
 		filters: []interfaces.DestinationFilter{
@@ -42,19 +43,27 @@ func NewCaptin(
 		},
 		sender:    &senders.HTTPEventSender{},
 		store:     store,
-		throttler: throttler,
+		throttler: throttles.NewThrottler(store),
 	}
 	return &c
 }
 
+// SetThrottler - Set throttle
+func (c *Captin) SetThrottler(throttle interfaces.ThrottleInterface) {
+	c.throttler = throttle
+}
+
+// SetDestinationFilters - Set filters
 func (c *Captin) SetDestinationFilters(filters []interfaces.DestinationFilter) {
 	c.filters = filters
 }
 
+// SetDestinationMiddlewares - Set middlewares
 func (c *Captin) SetDestinationMiddlewares(middlewares []interfaces.DestinationMiddleware) {
 	c.middlewares = middlewares
 }
 
+// Execute - Execute for events
 func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 	if e.IsValid() != true {
 		return false, &ExecutionError{Cause: "invalid incoming event object"}
