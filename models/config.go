@@ -3,6 +3,7 @@ package models
 import (
 	"regexp"
 	"strconv"
+	"time"
 )
 
 // Configuration - Webhook Configuration Model
@@ -19,7 +20,7 @@ type Configuration struct {
 }
 
 // GetThrottleValue - Get Throttle Value in millisecond
-func (c Configuration) GetThrottleValue() int {
+func (c Configuration) GetThrottleValue() time.Duration {
 	match := regexp.MustCompile("(\\d+(?:\\.\\d+)?)(s|ms)")
 	res := match.FindAllStringSubmatch(c.Throttle, -1)
 
@@ -34,9 +35,9 @@ func (c Configuration) GetThrottleValue() int {
 
 		switch unit {
 		case "ms":
-			return value
+			return time.Millisecond * time.Duration(value)
 		case "s":
-			return value * 1000
+			return time.Second * time.Duration(value)
 		default:
 			panic("unrecognized time unit")
 		}

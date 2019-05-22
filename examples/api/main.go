@@ -2,21 +2,26 @@ package main
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"os"
 	"path/filepath"
 
-	incoming "example-api/incoming"
+	"github.com/gin-gonic/gin"
+
 	core "github.com/shoplineapp/captin/core"
+	incoming "github.com/shoplineapp/captin/incoming"
+	stores "github.com/shoplineapp/captin/internal/stores"
 	models "github.com/shoplineapp/captin/models"
 )
 
 func main() {
-	port := ":8080"
+	fmt.Println("Starting in port:", getEnv("CAPTIN_PORT", "3000"))
+	port := fmt.Sprintf(":%s", getEnv("CAPTIN_PORT", "3000"))
 
+	// Load webhooks configuration
 	pwd, _ := os.Getwd()
-	configMapper := models.NewConfigurationMapperFromPath(filepath.Join(pwd, "hooks.json"))
-
+	path := os.Args[1:][0]
+	absPath := filepath.Join(pwd, path)
+	configMapper := models.NewConfigurationMapperFromPath(absPath)
 	captin := core.NewCaptin(*configMapper)
 
 	// Set up api server
@@ -25,11 +30,14 @@ func main() {
 	handler.Setup(*captin)
 	handler.SetRoutes(router)
 
-	router.POST("/callback", func(c *gin.Context) {
-		fmt.Println("Webhook callback received")
-		c.String(200, "Received")
-	})
-
 	fmt.Printf("* Binding captin on 0.0.0.0%s\n", port)
 	router.Run(port)
+}
+
+func getEnv(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return defaultValue
+	}
+	return value
 }
