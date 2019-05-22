@@ -72,7 +72,11 @@ func (d *Dispatcher) Dispatch(
 func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface) {
 	defer func() {
 		if err := recover(); err != nil {
-			d.Errors = append(d.Errors, err.(error))
+			d.Errors = append(d.Errors, &DispatcherError{
+				msg:         err.(error).Error(),
+				Destination: dest,
+				Event:       e,
+			})
 		}
 	}()
 
