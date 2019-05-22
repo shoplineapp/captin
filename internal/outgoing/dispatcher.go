@@ -61,40 +61,50 @@ func (d *Dispatcher) Dispatch(
 		if canTrigger {
 			go d.sendEvent(e, destination)
 		} else {
-			// Check if store have payload
-			dataKey := getEventDataKey(e, destination)
-			_, ok, _, storeErr := store.Get(dataKey)
-			if storeErr != nil {
-				d.Errors = append(d.Errors, storeErr)
-			}
-
-			jsonString, jsonErr := json.Marshal(e)
-			if jsonErr != nil {
-				d.Errors = append(d.Errors, jsonErr)
-			}
-
-			if ok {
-				// Update Value
-				_, updateErr := store.Update(dataKey, string(jsonString))
-				if updateErr != nil {
-					d.Errors = append(d.Errors, updateErr)
-				}
-			} else {
-				// Create Value
-				_, saveErr := store.Set(dataKey, string(jsonString), time.Duration(destination.Config.GetThrottleValue())*2*time.Millisecond)
-				if saveErr != nil {
-					d.Errors = append(d.Errors, saveErr)
-				}
-
-				// Schedule send event later
-				time.AfterFunc(timeRemain, d.sendAfterEvent(dataKey, store, destination))
-			}
+			d.processDelayedEvent(e, timeRemain, destination, store)
 		}
 	}
 	return nil
 }
 
 // Private Functions
+
+func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface) {
+	defer func() {
+		if err := recover(); err != nil {
+			d.Errors = append(d.Errors, err.(error))
+		}
+	}()
+
+	// Check if store have payload
+	dataKey := getEventDataKey(e, dest)
+	_, ok, _, storeErr := store.Get(dataKey)
+	if storeErr != nil {
+		panic(storeErr)
+	}
+
+	jsonString, jsonErr := json.Marshal(e)
+	if jsonErr != nil {
+		panic(jsonErr)
+	}
+
+	if ok {
+		// Update Value
+		_, updateErr := store.Update(dataKey, string(jsonString))
+		if updateErr != nil {
+			panic(updateErr)
+		}
+	} else {
+		// Create Value
+		_, saveErr := store.Set(dataKey, string(jsonString), time.Duration(dest.Config.GetThrottleValue())*2*time.Millisecond)
+		if saveErr != nil {
+			panic(saveErr)
+		}
+
+		// Schedule send event later
+		time.AfterFunc(timeRemain, d.sendAfterEvent(dataKey, store, dest))
+	}
+}
 
 func getEventKey(e models.IncomingEvent, d models.Destination) string {
 	return fmt.Sprintf("%s.%s.%s", e.Key, d.Config.Name, e.TargetId)
