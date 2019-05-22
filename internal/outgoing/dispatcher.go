@@ -47,7 +47,7 @@ func (d *Dispatcher) Dispatch(
 	throttler interfaces.ThrottleInterface) error {
 
 	for _, destination := range d.destinations {
-		canTrigger, timeRemain, err := throttler.CanTrigger(getEventKey(e, destination), destination.Config.GetThrottleValue())
+		canTrigger, timeRemain, err := throttler.CanTrigger(getEventKey(store, e, destination), destination.Config.GetThrottleValue())
 
 		if err != nil {
 			fmt.Println("[Dispatcher] Error: ", err)
@@ -81,7 +81,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 	}()
 
 	// Check if store have payload
-	dataKey := getEventDataKey(e, dest)
+	dataKey := getEventDataKey(store, e, dest)
 	_, ok, _, storeErr := store.Get(dataKey)
 	if storeErr != nil {
 		panic(storeErr)
@@ -110,12 +110,12 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 	}
 }
 
-func getEventKey(e models.IncomingEvent, d models.Destination) string {
-	return fmt.Sprintf("%s.%s.%s", e.Key, d.Config.Name, e.TargetId)
+func getEventKey(s interfaces.StoreInterface, e models.IncomingEvent, d models.Destination) string {
+	return s.DataKey(e, d, "", "")
 }
 
-func getEventDataKey(e models.IncomingEvent, d models.Destination) string {
-	return fmt.Sprintf("%s.%s.%s-data", e.Key, d.Config.Name, e.TargetId)
+func getEventDataKey(s interfaces.StoreInterface, e models.IncomingEvent, d models.Destination) string {
+	return s.DataKey(e, d, "", "-data")
 }
 
 func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Destination) {

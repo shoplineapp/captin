@@ -6,6 +6,7 @@ import (
 	"time"
 
 	interfaces "github.com/shoplineapp/captin/interfaces"
+	"github.com/shoplineapp/captin/models"
 )
 
 type item struct {
@@ -58,7 +59,6 @@ func (ms *MemoryStore) Get(key string) (string, bool, time.Duration, error) {
 func (ms *MemoryStore) Set(key string, value string, ttl time.Duration) (bool, error) {
 	ms.lock.Lock()
 	it, ok := ms.m[key]
-	fmt.Println("[Memstore] Set Value: ", value, ", Key: ", key)
 	if !ok {
 		it = &item{value: value}
 		ms.m[key] = it
@@ -74,7 +74,6 @@ func (ms *MemoryStore) Update(key string, value string) (bool, error) {
 	ms.lock.Lock()
 	defer ms.lock.Unlock()
 
-	fmt.Println("[Memstore] Update Value: ", value, ", Key: ", key)
 	it, ok := ms.m[key]
 	if !ok {
 		return false, nil
@@ -95,4 +94,9 @@ func (ms *MemoryStore) Remove(key string) (bool, error) {
 // Len - Get memory size
 func (ms *MemoryStore) Len() int {
 	return len(ms.m)
+}
+
+// DataKey - Generate DataKey with events and destination
+func (ms *MemoryStore) DataKey(e models.IncomingEvent, dest models.Destination, prefix string, suffix string) string {
+	return fmt.Sprintf("%s%s.%s.%s%s", prefix, e.Key, dest.Config.Name, e.TargetId, suffix)
 }

@@ -1,9 +1,11 @@
 package mocks
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/shoplineapp/captin/interfaces"
+	"github.com/shoplineapp/captin/models"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -35,4 +37,9 @@ func (s *StoreMock) Update(key string, value string) (bool, error) {
 func (s *StoreMock) Remove(key string) (bool, error) {
 	args := s.Called(key)
 	return args.Bool(0), args.Error(1)
+}
+
+// DataKey - Generate DataKey with events and destination (Won't Mock)
+func (s *StoreMock) DataKey(e models.IncomingEvent, dest models.Destination, prefix string, suffix string) string {
+	return fmt.Sprintf("%s%s.%s.%s%s", prefix, e.Key, dest.Config.Name, e.TargetId, suffix)
 }
