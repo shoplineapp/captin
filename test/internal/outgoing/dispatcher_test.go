@@ -12,17 +12,10 @@ import (
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	stores "github.com/shoplineapp/captin/internal/stores"
 	models "github.com/shoplineapp/captin/models"
+	mocks "github.com/shoplineapp/captin/test/mocks"
+
 	"github.com/stretchr/testify/mock"
 )
-
-type senderMock struct {
-	mock.Mock
-}
-
-func (s *senderMock) SendEvent(e models.IncomingEvent, d models.Destination) error {
-	args := s.Called(e, d)
-	return args.Error(0)
-}
 
 func TestDispatchEvents_Error(t *testing.T) {
 	store := stores.NewMemoryStore()
@@ -37,7 +30,7 @@ func TestDispatchEvents_Error(t *testing.T) {
 		destinations = append(destinations, models.Destination{Config: config})
 	}
 
-	sender := new(senderMock)
+	sender := new(mocks.SenderMock)
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(errors.New("Mock Error"))
 
@@ -78,7 +71,7 @@ func TestDispatchEvents(t *testing.T) {
 		destinations = append(destinations, models.Destination{Config: config})
 	}
 
-	sender := new(senderMock)
+	sender := new(mocks.SenderMock)
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
 
