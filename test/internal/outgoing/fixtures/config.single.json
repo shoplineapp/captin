@@ -1,0 +1,13 @@
+[
+  {
+    "id": "1",
+    "callback_url": "https://postman-echo.com/post",
+    "throttle": "500ms",
+    "actions": [
+      "product.update"
+    ],
+    "source": "core-api",
+    "name": "service_one",
+    "include_document": false
+  }
+]

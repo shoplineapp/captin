@@ -96,7 +96,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		}
 	} else {
 		// Create Value
-		_, saveErr := store.Set(dataKey, string(jsonString), time.Duration(dest.Config.GetThrottleValue())*2*time.Millisecond)
+		_, saveErr := store.Set(dataKey, string(jsonString), dest.Config.GetThrottleValue()*2)
 		if saveErr != nil {
 			panic(saveErr)
 		}
