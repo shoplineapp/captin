@@ -7,6 +7,7 @@ import (
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	"github.com/shoplineapp/captin/models"
 
+	lock "github.com/bsm/redis-lock"
 	"github.com/go-redis/redis"
 )
 
@@ -14,6 +15,7 @@ import (
 type RedisStore struct {
 	interfaces.StoreInterface
 	redisClient *redis.Client
+	locker      *lock.Locker
 }
 
 // NewRedisStore - Create new RedisStore
@@ -23,15 +25,36 @@ func NewRedisStore(addr string) *RedisStore {
 		Password: "",
 		DB:       0,
 	})
-	pong, err := client.Ping().Result()
-	fmt.Println(pong, err)
+
+	_, err := client.Ping().Result()
+	client.Set("test", "value", time.Hour).Err()
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+
+	// Create a new locker with default settings
+	locker := lock.New(client, "captin.locker.lock", nil)
+
 	return &RedisStore{
 		redisClient: client,
+		locker:      locker,
 	}
+}
+
+func (rs *RedisStore) ping() {
+	val, _ := rs.redisClient.Ping().Result()
+	fmt.Println(val)
 }
 
 // Get - Get value from store, return with remaining time
 func (rs RedisStore) Get(key string) (string, bool, time.Duration, error) {
+	_, redisLockErr := rs.locker.Lock()
+	if redisLockErr != nil {
+		fmt.Println("[RedisStore] Redis Lock Error: ", redisLockErr)
+		return "", false, time.Duration(0), redisLockErr
+	}
+	defer rs.locker.Unlock()
 	fmt.Println("[RedisStore] Get Key: ", key)
 	timeRemain, err := rs.redisClient.TTL(key).Result()
 
@@ -59,16 +82,33 @@ func (rs RedisStore) Get(key string) (string, bool, time.Duration, error) {
 
 // Set - Set value into store with ttl
 func (rs RedisStore) Set(key string, value string, ttl time.Duration) (bool, error) {
+	_, redisLockErr := rs.locker.Lock()
+	if redisLockErr != nil {
+		fmt.Println("[RedisStore] Redis Lock Error: ", redisLockErr)
+		return false, redisLockErr
+	}
+	defer rs.locker.Unlock()
+
 	fmt.Println("[RedisStore] Set Key: ", key)
 	err := rs.redisClient.Set(key, value, ttl).Err()
 	if err != nil {
+		fmt.Println("[RedisStore] Set Key Error: ", err)
 		return false, err
 	}
+	val, _, _, _ := rs.Get(key)
+	fmt.Println("[RedisStore] Set Key Value: ", val)
 	return true, nil
 }
 
 // Update - Update value for key
 func (rs RedisStore) Update(key string, value string) (bool, error) {
+	_, redisLockErr := rs.locker.Lock()
+	if redisLockErr != nil {
+		fmt.Println("[RedisStore] Redis Lock Error: ", redisLockErr)
+		return false, redisLockErr
+	}
+	defer rs.locker.Unlock()
+
 	fmt.Println("[RedisStore] Update Key: ", key)
 	timeRemain, err := rs.redisClient.TTL(key).Result()
 
@@ -85,6 +125,13 @@ func (rs RedisStore) Update(key string, value string) (bool, error) {
 
 // Remove - Remove value for key
 func (rs RedisStore) Remove(key string) (bool, error) {
+	_, redisLockErr := rs.locker.Lock()
+	if redisLockErr != nil {
+		fmt.Println("[RedisStore] Redis Lock Error: ", redisLockErr)
+		return false, redisLockErr
+	}
+	defer rs.locker.Unlock()
+
 	fmt.Println("[RedisStore] Remove Key: ", key)
 	err := rs.redisClient.Del(key).Err()
 	if err != nil {
@@ -95,5 +142,5 @@ func (rs RedisStore) Remove(key string) (bool, error) {
 
 // DataKey - Generate data key
 func (rs RedisStore) DataKey(e models.IncomingEvent, dest models.Destination, prefix string, suffix string) string {
-	return fmt.Sprintf("%s%s:%s#%s%s", prefix, e.Key, dest.Config.Name, e.TargetId, suffix)
+	return fmt.Sprintf("%s%s:%s:%s%s", prefix, e.Key, dest.Config.Name, e.TargetId, suffix)
 }
