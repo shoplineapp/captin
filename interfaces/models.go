@@ -6,7 +6,7 @@ import (
 
 // DestinationMiddleware - Interface for third-party application to add extra handling on destinations
 type DestinationMiddleware interface {
-	Apply(e models.IncomingEvent, d []models.Destination) (models.IncomingEvent, []models.Destination)
+	Apply(e *models.IncomingEvent, d []models.Destination) []models.Destination
 }
 
 // DestinationFilter - Interface for third-party application to filter destination by event

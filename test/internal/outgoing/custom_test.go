@@ -28,9 +28,9 @@ type MiddlewareMock struct {
 	mock.Mock
 }
 
-func (m *MiddlewareMock) Apply(e models.IncomingEvent, d []models.Destination) (models.IncomingEvent, []models.Destination) {
+func (m *MiddlewareMock) Apply(e *models.IncomingEvent, d []models.Destination) []models.Destination {
 	m.Called(e, d)
-	return e, d
+	return d
 }
 
 func TestCustom_Sift(t *testing.T) {
@@ -46,7 +46,7 @@ func TestCustom_Sift(t *testing.T) {
 		{Config: models.Configuration{Source: "service_1"}},
 		{Config: models.Configuration{Source: "service_2"}},
 	}
-	sifted := Custom{}.Sift(event, destinations, []interfaces.DestinationFilter{filter}, []interfaces.DestinationMiddleware{middleware})
+	sifted := Custom{}.Sift(&event, destinations, []interfaces.DestinationFilter{filter}, []interfaces.DestinationMiddleware{middleware})
 	filter.AssertNumberOfCalls(t, "Applicable", 2)
 	filter.AssertNumberOfCalls(t, "Run", 2)
 	middleware.AssertNumberOfCalls(t, "Apply", 1)
@@ -62,7 +62,7 @@ func TestCustom_Sift(t *testing.T) {
 		{Config: models.Configuration{Source: "service_1"}},
 		{Config: models.Configuration{Source: "service_2"}},
 	}
-	sifted = Custom{}.Sift(event, destinations, []interfaces.DestinationFilter{filter}, []interfaces.DestinationMiddleware{middleware})
+	sifted = Custom{}.Sift(&event, destinations, []interfaces.DestinationFilter{filter}, []interfaces.DestinationMiddleware{middleware})
 	filter.AssertNumberOfCalls(t, "Applicable", 2)
 	filter.AssertNumberOfCalls(t, "Run", 0)
 	middleware.AssertNumberOfCalls(t, "Apply", 1)
@@ -77,7 +77,7 @@ func TestCustom_Sift(t *testing.T) {
 	destinations = []models.Destination{
 		{Config: models.Configuration{Source: "service_1"}},
 	}
-	sifted = Custom{}.Sift(event, destinations, []interfaces.DestinationFilter{filter}, []interfaces.DestinationMiddleware{middleware})
+	sifted = Custom{}.Sift(&event, destinations, []interfaces.DestinationFilter{filter}, []interfaces.DestinationMiddleware{middleware})
 	filter.AssertNumberOfCalls(t, "Applicable", 1)
 	filter.AssertNumberOfCalls(t, "Run", 1)
 	middleware.AssertNumberOfCalls(t, "Apply", 1)
