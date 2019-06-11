@@ -11,7 +11,10 @@ import (
 
 	stores "github.com/shoplineapp/captin/internal/stores"
 	throttles "github.com/shoplineapp/captin/internal/throttles"
+	log "github.com/sirupsen/logrus"
 )
+
+var cLogger = log.WithFields(log.Fields{"class": "Captin"})
 
 // ExecutionError - Error on executing events
 type ExecutionError struct {
@@ -84,8 +87,10 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 	}
 
 	destinations = outgoing.Custom{}.Sift(e, destinations, c.filters, c.middlewares)
-
-	// TODO: Pass event and destinations into dispatcher
+	cLogger.WithFields(log.Fields{
+		"event":        e,
+		"destinations": destinations,
+	}).Debug("Ready to dispatch event with destinations")
 
 	// Create dispatcher and dispatch events
 	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, c.sender)
@@ -94,10 +99,12 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 	for _, err := range dispatcher.Errors {
 		switch dispatcherErr := err.(type) {
 		case *outgoing.DispatcherError:
-			fmt.Println("[Dispatcher] Error on event: ", dispatcherErr.Event.TargetId)
-			fmt.Println("[Dispatcher] Error on event type: ", dispatcherErr.Event.TargetType)
+			cLogger.WithFields(log.Fields{
+				"target_id":   dispatcherErr.Event.TargetId,
+				"target_type": dispatcherErr.Event.TargetType,
+			}).Error("Failed to dispatch event")
 		default:
-			fmt.Println(e)
+			cLogger.WithFields(log.Fields{"error": e}).Error("Unhandled error on dispatcher")
 		}
 	}
 

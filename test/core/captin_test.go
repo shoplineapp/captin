@@ -1,9 +1,7 @@
 package models_test
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
-	"reflect"
 	"testing"
 
 	. "github.com/shoplineapp/captin/core"
@@ -15,7 +13,6 @@ func TestExecute(t *testing.T) {
 	var err error
 
 	_, err = Captin{}.Execute(models.IncomingEvent{})
-	fmt.Println(reflect.TypeOf(err))
 
 	if assert.Error(t, err, "invalid incoming event") {
 		assert.IsType(t, err, &ExecutionError{})

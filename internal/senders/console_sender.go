@@ -1,18 +1,21 @@
 package senders
 
 import (
-	"fmt"
-
 	models "github.com/shoplineapp/captin/models"
+	log "github.com/sirupsen/logrus"
 )
+
+var cLogger = log.WithFields(log.Fields{"class": "ConsoleEventSender"})
 
 // ConsoleEventSender - Present Event in console
 type ConsoleEventSender struct{}
 
 // SendEvent - #ConsoleEventSender SendEvent
 func (c *ConsoleEventSender) SendEvent(e models.IncomingEvent, d models.Destination) error {
-	fmt.Println("Configuration: \t\t", d.Config.Name)
-	fmt.Println("Process Event ID: \t", e.TargetId)
-	fmt.Println("Process Event Type: \t", e.TargetType)
+	cLogger.WithFields(log.Fields{
+		"config_name": d.Config.Name,
+		"target_id":   e.TargetId,
+		"target_type": e.TargetType,
+	}).Debug("Event sent")
 	return nil
 }
