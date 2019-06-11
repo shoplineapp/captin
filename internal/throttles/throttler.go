@@ -1,11 +1,13 @@
 package throttles
 
 import (
-	"fmt"
 	"time"
 
 	interfaces "github.com/shoplineapp/captin/interfaces"
+	log "github.com/sirupsen/logrus"
 )
+
+var tLogger = log.WithFields(log.Fields{"class": "Throttler"})
 
 // Throttler - Event Throttler
 type Throttler struct {
@@ -27,9 +29,9 @@ func (t *Throttler) CanTrigger(id string, period time.Duration) (bool, time.Dura
 	if err != nil {
 		return true, time.Duration(0), err
 	}
-	fmt.Println("[Throttler] Value: ", val)
+	tLogger.WithFields(log.Fields{"value": val}).Debug("Check throttle value on CanTrigger")
 	if !ok {
-		fmt.Println("[Throttler] Create throttle in store with period, ", period)
+		tLogger.WithFields(log.Fields{"period": period}).Error("Unable to create throttle in store with period")
 		t.store.Set(id, "1", period)
 		return true, time.Duration(0), nil
 	}

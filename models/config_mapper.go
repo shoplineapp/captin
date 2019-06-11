@@ -2,9 +2,12 @@ package models
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
+
+	log "github.com/sirupsen/logrus"
 )
+
+var cmLogger = log.WithFields(log.Fields{"class": "ConfigurationMapper"})
 
 // ConfigurationMapper - Action to configuration mapper
 type ConfigurationMapper struct {
@@ -29,16 +32,18 @@ func NewConfigurationMapper(configs []Configuration) *ConfigurationMapper {
 
 // NewConfigurationMapperFromPath - Read Configuration from path
 func NewConfigurationMapperFromPath(path string) *ConfigurationMapper {
+	pathLogger := cmLogger.WithFields(log.Fields{"path": path})
 	data, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		fmt.Println("[Configuration] Failed to load file")
+		pathLogger.Error("Failed to load file")
 		panic(err)
 	}
 
 	configs := []Configuration{}
 	jsonErr := json.Unmarshal(data, &configs)
 	if jsonErr != nil {
+		pathLogger.Error("Invalid configuration file format")
 		panic(jsonErr)
 	}
 
