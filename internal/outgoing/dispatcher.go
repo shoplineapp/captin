@@ -122,6 +122,10 @@ func getEventDataKey(s interfaces.StoreInterface, e models.IncomingEvent, d mode
 }
 
 func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Destination) {
+	callbackLogger := dLogger.WithFields(log.Fields{
+		"callback_url": destination.Config.CallbackURL,
+	})
+	callbackLogger.Debug("Ready to send event")
 	err := d.sender.SendEvent(evt, destination)
 	if err != nil {
 		d.Errors = append(d.Errors, &DispatcherError{
@@ -130,9 +134,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 			Event:       evt,
 		})
 	}
-	dLogger.WithFields(log.Fields{
-		"callback_url": destination.Config.CallbackURL,
-	}).Info(fmt.Sprintf("Event successfully sent to %s", destination.Config.CallbackURL))
+	callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s", destination.Config.CallbackURL))
 }
 
 func (d *Dispatcher) sendAfterEvent(key string, store interfaces.StoreInterface, dest models.Destination) func() {

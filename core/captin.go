@@ -86,7 +86,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 		destinations = append(destinations, models.Destination{Config: config})
 	}
 
-	destinations = outgoing.Custom{}.Sift(e, destinations, c.filters, c.middlewares)
+	destinations = outgoing.Custom{}.Sift(&e, destinations, c.filters, c.middlewares)
 	cLogger.WithFields(log.Fields{
 		"event":        e,
 		"destinations": destinations,
