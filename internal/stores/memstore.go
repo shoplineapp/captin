@@ -7,7 +7,10 @@ import (
 
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	"github.com/shoplineapp/captin/models"
+	log "github.com/sirupsen/logrus"
 )
+
+var mLogger = log.WithFields(log.Fields{"class": "MemoryStore"})
 
 type item struct {
 	value      string
@@ -48,7 +51,8 @@ func NewMemoryStore() *MemoryStore {
 func (ms *MemoryStore) Get(key string) (string, bool, time.Duration, error) {
 	ms.lock.Lock()
 	defer ms.lock.Unlock()
-	fmt.Println("[Memstore] Get Key: ", key)
+
+	mLogger.WithFields(log.Fields{"key": key}).Debug("Get key")
 	if it, ok := ms.m[key]; ok {
 		return it.value, true, time.Since(it.createDate), nil
 	}

@@ -6,7 +6,10 @@ import (
 	"github.com/robertkrimen/otto"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
+	log "github.com/sirupsen/logrus"
 )
+
+var vLogger = log.WithFields(log.Fields{"class": "ValidateFilter"})
 
 type ValidateFilter struct {
 	interfaces.DestinationFilter
@@ -32,7 +35,7 @@ func (f ValidateFilter) Run(e models.IncomingEvent, d models.Destination) (bool,
 		err = errToB
 	}
 	if err != nil {
-		fmt.Printf("[ValidateFilter] Unable to parse result %s", err)
+		vLogger.WithFields(log.Fields{"error": err}).Error("Unable to parse result")
 	}
 	return valid, err
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -10,10 +9,14 @@ import (
 
 	core "github.com/shoplineapp/captin/core"
 	models "github.com/shoplineapp/captin/models"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
-	fmt.Println("* Starting captin (Press ENTER to quit)")
+	log.SetFormatter(&log.JSONFormatter{})
+	log.SetOutput(os.Stdout)
+	log.SetLevel(log.DebugLevel)
+	log.Info("* Starting captin (Press ENTER to quit)")
 
 	pwd, _ := os.Getwd()
 	path := os.Args[1:][0]
@@ -24,7 +27,7 @@ func main() {
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Print("> ")
+		log.Debug("> ")
 		text, _ := reader.ReadString('\n')
 		// convert CRLF to LF
 		text = strings.Replace(text, "\n", "", -1)

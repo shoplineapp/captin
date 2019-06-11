@@ -7,7 +7,10 @@ import (
 
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
+	log "github.com/sirupsen/logrus"
 )
+
+var dLogger = log.WithFields(log.Fields{"class": "Dispatcher"})
 
 // DispatcherError - Error when send events
 type DispatcherError struct {
@@ -50,7 +53,7 @@ func (d *Dispatcher) Dispatch(
 		canTrigger, timeRemain, err := throttler.CanTrigger(getEventKey(store, e, destination), destination.Config.GetThrottleValue())
 
 		if err != nil {
-			fmt.Println("[Dispatcher] Error: ", err)
+			dLogger.WithFields(log.Fields{"event": e, "destination": destination}).Error("Failed to dispatch event")
 			d.Errors = append(d.Errors, err)
 
 			// Send without throttling
@@ -119,6 +122,10 @@ func getEventDataKey(s interfaces.StoreInterface, e models.IncomingEvent, d mode
 }
 
 func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Destination) {
+	callbackLogger := dLogger.WithFields(log.Fields{
+		"callback_url": destination.Config.CallbackURL,
+	})
+	callbackLogger.Debug("Ready to send event")
 	err := d.sender.SendEvent(evt, destination)
 	if err != nil {
 		d.Errors = append(d.Errors, &DispatcherError{
@@ -127,10 +134,11 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 			Event:       evt,
 		})
 	}
+	callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s", destination.Config.CallbackURL))
 }
 
 func (d *Dispatcher) sendAfterEvent(key string, store interfaces.StoreInterface, dest models.Destination) func() {
-	fmt.Println("[Dispatcher]: sendAfterEvent: ", key)
+	dLogger.WithFields(log.Fields{"key": key}).Debug("After event callback")
 	payload, _, _, _ := store.Get(key)
 	event := models.IncomingEvent{}
 	json.Unmarshal([]byte(payload), &event)

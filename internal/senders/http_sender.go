@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 
 	models "github.com/shoplineapp/captin/models"
+	log "github.com/sirupsen/logrus"
 )
+
+var hLogger = log.WithFields(log.Fields{"class": "HttpEventSender"})
 
 // HTTPResponse - HTTP Response
 type HTTPResponse struct {
@@ -52,7 +54,7 @@ func (c *HTTPEventSender) SendEvent(e models.IncomingEvent, d models.Destination
 	defer res.Body.Close()
 
 	body, _ := ioutil.ReadAll(res.Body)
-	fmt.Println("response Body:", string(body))
+	hLogger.WithFields(log.Fields{"result": string(body)}).Debug("Send http event with result")
 
 	return nil
 }
