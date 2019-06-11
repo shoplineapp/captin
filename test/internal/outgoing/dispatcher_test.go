@@ -118,7 +118,7 @@ func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
 	throttleID := "product.update.service_one.product_id-data"
 	throttlePeriod := time.Millisecond * 500 * 2
 	store.AssertCalled(t, "Get", throttleID)
-	store.AssertCalled(t, "Set", throttleID, `{"event_key":"product.update","source":"core","payload":{"field1":1},"target_type":"Product","target_id":"product_id"}`, throttlePeriod)
+	store.AssertCalled(t, "Set", throttleID, `{"event_key":"product.update","source":"core","payload":{"field1":1},"control":null,"target_type":"Product","target_id":"product_id"}`, throttlePeriod)
 
 	time.Sleep(600 * time.Millisecond)
 
@@ -132,7 +132,7 @@ func TestDispatchEvents_Throttled_UpdatePayload(t *testing.T) {
 	throttlePeriod := time.Millisecond * 700 * 2
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
-	store.On("Get", throttleID).Return(`{"event_key":"product.update","source":"core","payload":{"field1":1},"target_type":"Product","target_id":"product_id"}`, true, throttlePeriod, nil)
+	store.On("Get", throttleID).Return(`{"event_key":"product.update","source":"core","payload":{"field1":1},"control":null,"target_type":"Product","target_id":"product_id"}`, true, throttlePeriod, nil)
 	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 	store.On("Update", mock.Anything, mock.Anything).Return(true, nil)
 	store.On("Remove", mock.Anything).Return(true, nil)
@@ -148,5 +148,5 @@ func TestDispatchEvents_Throttled_UpdatePayload(t *testing.T) {
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
 	store.AssertCalled(t, "Get", throttleID)
-	store.AssertCalled(t, "Update", throttleID, `{"event_key":"product.update","source":"core","payload":{"field1":2},"target_type":"Product","target_id":"product_id"}`)
+	store.AssertCalled(t, "Update", throttleID, `{"event_key":"product.update","source":"core","payload":{"field1":2},"control":null,"target_type":"Product","target_id":"product_id"}`)
 }

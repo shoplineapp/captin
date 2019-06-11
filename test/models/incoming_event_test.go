@@ -15,6 +15,9 @@ func TestNewIncomingEvent(t *testing.T) {
 		"_id":  "xxxxx",
 		"type": "product",
 	}
+	control := map[string]interface{}{
+		"host": "http://example.com",
+	}
 	target_type := "product"
 	target_id := "xxxxx"
 
@@ -22,6 +25,7 @@ func TestNewIncomingEvent(t *testing.T) {
 		"event_key":   event_key,
 		"source":      source,
 		"payload":     payload,
+		"control":     control,
 		"target_type": target_type,
 		"target_id":   target_id,
 	})
@@ -31,6 +35,7 @@ func TestNewIncomingEvent(t *testing.T) {
 	assert.Equal(t, payload, inc.Payload)
 	assert.Equal(t, target_type, inc.TargetType)
 	assert.Equal(t, target_id, inc.TargetId)
+	assert.Equal(t, control, inc.Control)
 }
 
 func TestIsValid(t *testing.T) {
