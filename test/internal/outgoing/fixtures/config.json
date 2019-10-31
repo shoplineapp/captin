@@ -14,7 +14,8 @@
     ],
     "source": "core-api",
     "name": "service_one",
-    "include_document": false
+    "include_document": false,
+    "sender": "mock"
   },
   {
     "id": "2",
@@ -27,7 +28,8 @@
     ],
     "source": "open-api",
     "name": "service_two",
-    "include_document": false
+    "include_document": false,
+    "sender": "mock"
   },
   {
     "id": "3",
@@ -40,6 +42,7 @@
     ],
     "source": "open-api",
     "name": "service_two",
-    "include_document": false
+    "include_document": false,
+    "sender": "mock"
   }
 ]

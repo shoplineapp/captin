@@ -25,19 +25,19 @@ func (e *DispatcherError) Error() string {
 
 // Dispatcher - Event Dispatcher
 type Dispatcher struct {
-	destinations []models.Destination
-	sender       interfaces.EventSenderInterface
-	Errors       []error
+	destinations  []models.Destination
+	senderMapping map[string]interfaces.EventSenderInterface
+	Errors        []error
 }
 
 // NewDispatcherWithDestinations - Create Outgoing event dispatcher with destinations
 func NewDispatcherWithDestinations(
 	destinations []models.Destination,
-	sender interfaces.EventSenderInterface) *Dispatcher {
+	senderMapping map[string]interfaces.EventSenderInterface) *Dispatcher {
 	result := Dispatcher{
-		destinations: destinations,
-		sender:       sender,
-		Errors:       []error{},
+		destinations:  destinations,
+		senderMapping: senderMapping,
+		Errors:        []error{},
 	}
 
 	return &result
@@ -126,13 +126,29 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		"callback_url": destination.Config.CallbackURL,
 	})
 	callbackLogger.Debug("Ready to send event")
-	err := d.sender.SendEvent(evt, destination)
+
+	senderKey := destination.Config.Sender
+	if senderKey == "" {
+		senderKey = "http"
+	}
+	sender, senderExists := d.senderMapping[senderKey]
+	if senderExists == false {
+		d.Errors = append(d.Errors, &DispatcherError{
+			msg:         fmt.Sprintf("Sender key %s does not exist", senderKey),
+			Destination: destination,
+			Event:       evt,
+		})
+		return
+	}
+
+	err := sender.SendEvent(evt, destination)
 	if err != nil {
 		d.Errors = append(d.Errors, &DispatcherError{
 			msg:         err.Error(),
 			Destination: destination,
 			Event:       evt,
 		})
+		return
 	}
 	callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s", destination.Config.CallbackURL))
 }

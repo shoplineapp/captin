@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
@@ -21,7 +22,9 @@ type HTTPResponse struct {
 }
 
 // HTTPEventSender - Send Event through HTTP
-type HTTPEventSender struct{}
+type HTTPEventSender struct {
+	interfaces.EventSenderInterface
+}
 
 // SendEvent - #HttpEventSender SendEvent
 func (c *HTTPEventSender) SendEvent(e models.IncomingEvent, d models.Destination) error {
