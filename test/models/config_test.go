@@ -26,6 +26,7 @@ func TestDecodeConfigurationJson(t *testing.T) {
 	assert.Equal(t, len(subject.Actions), 6)
 	assert.Equal(t, subject.Source, "core-api")
 	assert.Equal(t, subject.Name, "sync_service")
+	assert.Equal(t, subject.Sender, "mock")
 	assert.Equal(t, subject.IncludeDocument, false)
 }
 

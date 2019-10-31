@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	models "github.com/shoplineapp/captin/models"
 	mocks "github.com/shoplineapp/captin/test/mocks"
@@ -19,6 +20,9 @@ import (
 func setup(path string) (*mocks.StoreMock, *mocks.SenderMock, *outgoing.Dispatcher, *mocks.ThrottleMock) {
 	store := new(mocks.StoreMock)
 	sender := new(mocks.SenderMock)
+	senderMapping := map[string]interfaces.EventSenderInterface{
+		"mock": sender,
+	}
 	throttler := new(mocks.ThrottleMock)
 
 	data, err := ioutil.ReadFile(path)
@@ -32,7 +36,7 @@ func setup(path string) (*mocks.StoreMock, *mocks.SenderMock, *outgoing.Dispatch
 		destinations = append(destinations, models.Destination{Config: config})
 	}
 
-	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, sender)
+	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, senderMapping)
 
 	return store, sender, dispatcher, throttler
 }

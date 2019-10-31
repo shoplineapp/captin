@@ -8,6 +8,7 @@
     ],
     "source": "core-api",
     "name": "service_one",
-    "include_document": false
+    "include_document": false,
+    "sender": "mock"
   }
 ]

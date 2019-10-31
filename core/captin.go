@@ -27,26 +27,29 @@ func (e *ExecutionError) Error() string {
 
 // Captin - Captin instance
 type Captin struct {
-	ConfigMap   interfaces.ConfigMapperInterface
-	filters     []interfaces.DestinationFilter
-	middlewares []interfaces.DestinationMiddleware
-	sender      interfaces.EventSenderInterface
-	store       interfaces.StoreInterface
-	throttler   interfaces.ThrottleInterface
+	ConfigMap     interfaces.ConfigMapperInterface
+	filters       []interfaces.DestinationFilter
+	middlewares   []interfaces.DestinationMiddleware
+	SenderMapping map[string]interfaces.EventSenderInterface
+	store         interfaces.StoreInterface
+	throttler     interfaces.ThrottleInterface
 }
 
 // NewCaptin - Create Captin instance with default http senders and time throttler
 func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 	store := stores.NewMemoryStore()
+	senderMapping := map[string]interfaces.EventSenderInterface{
+		"http": &senders.HTTPEventSender{},
+	}
 	c := Captin{
 		ConfigMap: configMap,
 		filters: []interfaces.DestinationFilter{
 			outgoing_filters.ValidateFilter{},
 			outgoing_filters.SourceFilter{},
 		},
-		sender:    &senders.HTTPEventSender{},
-		store:     store,
-		throttler: throttles.NewThrottler(store),
+		SenderMapping: senderMapping,
+		store:         store,
+		throttler:     throttles.NewThrottler(store),
 	}
 	return &c
 }
@@ -72,6 +75,10 @@ func (c *Captin) SetDestinationMiddlewares(middlewares []interfaces.DestinationM
 	c.middlewares = middlewares
 }
 
+func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSenderInterface) {
+	c.SenderMapping = senderMapping
+}
+
 // Execute - Execute for events
 func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 	if e.IsValid() != true {
@@ -93,7 +100,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 	}).Debug("Ready to dispatch event with destinations")
 
 	// Create dispatcher and dispatch events
-	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, c.sender)
+	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, c.SenderMapping)
 	dispatcher.Dispatch(e, c.store, c.throttler)
 
 	for _, err := range dispatcher.Errors {

@@ -17,6 +17,7 @@ type Configuration struct {
 	IncludeDocument bool     `json:"include_document"`
 	Name            string   `json:"name"`
 	AllowLoopback   bool     `json:"allow_loopback"`
+	Sender          string   `json:"sender"`
 }
 
 // GetThrottleValue - Get Throttle Value in millisecond

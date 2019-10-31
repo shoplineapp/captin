@@ -6,5 +6,6 @@
   "actions": ["product.update", "product.create", "user.create", "user.update", "order.create", "order.update"], 
   "source": "core-api", 
   "name": "sync_service",
-  "include_document": false
+  "include_document": false,
+  "sender": "mock"
 }
