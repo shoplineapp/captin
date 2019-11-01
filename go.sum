@@ -1,3 +1,5 @@
+github.com/beanstalkd/go-beanstalk v0.0.0-20190515041346-390b03b3064a h1:Q9n7/Y0jg/U18xjQz2l42we7XQAqwkBGWByBZ36BAHo=
+github.com/beanstalkd/go-beanstalk v0.0.0-20190515041346-390b03b3064a/go.mod h1:Q3f6RCbUHp8RHSfBiPUZBojK76rir8Rl+KINuz2/sYs=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

@@ -40,6 +40,7 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 	store := stores.NewMemoryStore()
 	senderMapping := map[string]interfaces.EventSenderInterface{
 		"http": &senders.HTTPEventSender{},
+		"beanstalkd": &senders.BeanstalkdSender{},
 	}
 	c := Captin{
 		ConfigMap: configMap,
