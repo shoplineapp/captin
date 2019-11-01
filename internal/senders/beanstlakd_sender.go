@@ -11,7 +11,7 @@ import (
   log "github.com/sirupsen/logrus"
 )
 
-bLogger = log.WithFields(log.Fields{"class": "BeanstalkdSender"})
+var bLogger = log.WithFields(log.Fields{"class": "BeanstalkdSender"})
 
 // BeanstalkdSender - Send Event to beanstalkd
 type BeanstalkdSender struct {
@@ -20,10 +20,11 @@ type BeanstalkdSender struct {
 
 // SendEvent - #BeanstalkdSender SendEvent
 func (c *BeanstalkdSender) SendEvent(e models.IncomingEvent, d models.Destination) error {
-  conn, err := beanstalk.Dial("tcp", e.Control["beanstalkd_host"])
+  host := fmt.Sprintf("%v", e.Control["beanstalkd_host"])
+  conn, err := beanstalk.Dial("tcp", host)
   if err != nil {
     bLogger.WithFields(log.Fields{
-      "error": err
+      "error": err,
     }).Error("Beanstalk create connection failed.")
     return err
   }
@@ -34,7 +35,7 @@ func (c *BeanstalkdSender) SendEvent(e models.IncomingEvent, d models.Destinatio
   jobBody, err := json.Marshal(e.Payload)
   if err != nil {
     bLogger.WithFields(log.Fields{
-      "error": err
+      "error": err,
     }).Error("Beanstalkd job payload format invalid.")
     return err
   }
@@ -43,14 +44,14 @@ func (c *BeanstalkdSender) SendEvent(e models.IncomingEvent, d models.Destinatio
   id, err := conn.Put(jobBody, pri, delay, ttr)
   if err != nil {
     bLogger.WithFields(log.Fields{
-      "error": err
+      "error": err,
     }).Error("Beanstalk client put job failed.")
     return err
   }
 
   bLogger.WithFields(log.Fields{
-    "id": id
-    "jobBody": string(jobBody)
+    "id": id,
+    "jobBody": string(jobBody),
   }).Info("Enqueue job.")
 
   defer conn.Close()
