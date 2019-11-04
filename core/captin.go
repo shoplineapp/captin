@@ -6,7 +6,7 @@ import (
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	outgoing_filters "github.com/shoplineapp/captin/internal/outgoing/filters"
-	senders "github.com/shoplineapp/captin/internal/senders"
+	senders "github.com/shoplineapp/captin/senders"
 	models "github.com/shoplineapp/captin/models"
 
 	stores "github.com/shoplineapp/captin/internal/stores"
