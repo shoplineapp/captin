@@ -2,7 +2,6 @@ package senders
 
 import (
   "encoding/json"
-  "fmt"
   "time"
 
   interfaces "github.com/shoplineapp/captin/interfaces"
@@ -20,8 +19,7 @@ type BeanstalkdSender struct {
 
 // SendEvent - #BeanstalkdSender SendEvent
 func (c *BeanstalkdSender) SendEvent(e models.IncomingEvent, d models.Destination) error {
-  host := fmt.Sprintf("%v", e.Control["beanstalkd_host"])
-  conn, err := beanstalk.Dial("tcp", host)
+  conn, err := beanstalk.Dial("tcp", e.Control["beanstalkd_host"].(string))
   if err != nil {
     bLogger.WithFields(log.Fields{
       "error": err,
@@ -29,8 +27,7 @@ func (c *BeanstalkdSender) SendEvent(e models.IncomingEvent, d models.Destinatio
     return err
   }
 
-  tubeName := fmt.Sprintf("%s.%s", e.Control["tube_namespace"], e.Control["queue_name"])
-  conn.Tube = beanstalk.Tube { Conn: conn, Name: tubeName }
+  conn.Tube = beanstalk.Tube { Conn: conn, Name: e.Control["queue_name"].(string) }
 
   jobBody, err := json.Marshal(e.Payload)
   if err != nil {
