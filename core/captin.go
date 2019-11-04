@@ -6,7 +6,7 @@ import (
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	outgoing_filters "github.com/shoplineapp/captin/internal/outgoing/filters"
-	senders "github.com/shoplineapp/captin/internal/senders"
+	senders "github.com/shoplineapp/captin/senders"
 	models "github.com/shoplineapp/captin/models"
 
 	stores "github.com/shoplineapp/captin/internal/stores"
@@ -40,6 +40,7 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 	store := stores.NewMemoryStore()
 	senderMapping := map[string]interfaces.EventSenderInterface{
 		"http": &senders.HTTPEventSender{},
+		"beanstalkd": &senders.BeanstalkdSender{},
 	}
 	c := Captin{
 		ConfigMap: configMap,
