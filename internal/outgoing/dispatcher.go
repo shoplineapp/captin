@@ -3,6 +3,7 @@ package outgoing
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	interfaces "github.com/shoplineapp/captin/interfaces"
@@ -85,7 +86,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 
 	// Check if store have payload
 	dataKey := getEventDataKey(store, e, dest)
-	_, ok, _, storeErr := store.Get(dataKey)
+	storedData, dataExists, _, storeErr := store.Get(dataKey)
 	if storeErr != nil {
 		panic(storeErr)
 	}
@@ -95,7 +96,21 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		panic(jsonErr)
 	}
 
-	if ok {
+	if dataExists {
+		storedEvent := models.IncomingEvent{}
+		json.Unmarshal([]byte(storedData), &storedEvent)
+		if getControlTimestamp(storedEvent, 0) > getControlTimestamp(e, uint64(time.Now().UnixNano())) {
+			// Skip updating event data as stored data has newer timestamp
+			dLogger.WithFields(log.Fields{
+				"storedEvent":  storedEvent,
+				"event":        e,
+				"eventDataKey": "dataKey",
+			}).Debug("Skipping update on event data")
+			return
+		}
+	}
+
+	if dataExists {
 		// Update Value
 		_, updateErr := store.Update(dataKey, string(jsonString))
 		if updateErr != nil {
@@ -111,6 +126,31 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		// Schedule send event later
 		time.AfterFunc(timeRemain, d.sendAfterEvent(dataKey, store, dest))
 	}
+}
+
+func getControlTimestamp(e models.IncomingEvent, defaultValue uint64) uint64 {
+	defer func(d uint64) uint64 {
+		if err := recover(); err != nil {
+			return d
+		}
+		return 0
+	}(defaultValue)
+
+	value := e.Control["ts"]
+
+	// Type assertion from interface
+	switch v := value.(type) {
+	case int:
+		value = uint64(v)
+	case string:
+		parsed, err := strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			panic("unable to convert string timestamp")
+		}
+		value = parsed
+	}
+
+	return value.(uint64)
 }
 
 func getEventKey(s interfaces.StoreInterface, e models.IncomingEvent, d models.Destination) string {
