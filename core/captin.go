@@ -6,8 +6,8 @@ import (
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	outgoing_filters "github.com/shoplineapp/captin/internal/outgoing/filters"
-	senders "github.com/shoplineapp/captin/senders"
 	models "github.com/shoplineapp/captin/models"
+	senders "github.com/shoplineapp/captin/senders"
 
 	stores "github.com/shoplineapp/captin/internal/stores"
 	throttles "github.com/shoplineapp/captin/internal/throttles"
@@ -39,7 +39,7 @@ type Captin struct {
 func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 	store := stores.NewMemoryStore()
 	senderMapping := map[string]interfaces.EventSenderInterface{
-		"http": &senders.HTTPEventSender{},
+		"http":       &senders.HTTPEventSender{},
 		"beanstalkd": &senders.BeanstalkdSender{},
 	}
 	c := Captin{
@@ -81,9 +81,9 @@ func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSende
 }
 
 // Execute - Execute for events
-func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
+func (c Captin) Execute(e models.IncomingEvent) (bool, []error) {
 	if e.IsValid() != true {
-		return false, &ExecutionError{Cause: "invalid incoming event object"}
+		return false, []error{&ExecutionError{Cause: "invalid incoming event object"}}
 	}
 
 	configs := c.ConfigMap.ConfigsForKey(e.Key)
@@ -98,7 +98,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 	cLogger.WithFields(log.Fields{
 		"event":        e,
 		"destinations": destinations,
-	}).Debug("Ready to dispatch event with destinations")
+	}).Info("Ready to dispatch event with destinations")
 
 	// Create dispatcher and dispatch events
 	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, c.SenderMapping)
@@ -108,13 +108,14 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, error) {
 		switch dispatcherErr := err.(type) {
 		case *outgoing.DispatcherError:
 			cLogger.WithFields(log.Fields{
-				"target_id":   dispatcherErr.Event.TargetId,
-				"target_type": dispatcherErr.Event.TargetType,
+				"event":       dispatcherErr.Event,
+				"destination": dispatcherErr.Destination,
+				"reason":      dispatcherErr.Error(),
 			}).Error("Failed to dispatch event")
 		default:
 			cLogger.WithFields(log.Fields{"error": e}).Error("Unhandled error on dispatcher")
 		}
 	}
 
-	return true, nil
+	return true, dispatcher.Errors
 }

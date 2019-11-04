@@ -19,16 +19,20 @@ type captinMock struct {
 	mock.Mock
 }
 
-func (f *captinMock) Execute(c models.IncomingEvent) (bool, error) {
+func (f *captinMock) Execute(c models.IncomingEvent) (bool, []error) {
 	args := f.Called(c)
-	return args.Bool(0), args.Error(1)
+	errors := args.Error(1)
+	if errors == nil {
+		errors = []error{}
+	}
+	return args.Bool(0), errors
 }
 
 func TestHttpEventHandler_SetRoutes(t *testing.T) {
 	router := gin.Default()
 
 	captin := new(captinMock)
-	captin.On("Execute", mock.Anything).Return(true, nil)
+	captin.On("Execute", mock.Anything).Return(true, []errors{})
 
 	handler := HttpEventHandler{}
 	handler.Setup(captin)
