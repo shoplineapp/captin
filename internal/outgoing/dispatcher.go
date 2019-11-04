@@ -99,7 +99,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 	if dataExists {
 		storedEvent := models.IncomingEvent{}
 		json.Unmarshal([]byte(storedData), &storedEvent)
-		if getControlTimestamp(storedEvent, 0) > getControlTimestamp(e, time.Now().Unix()) {
+		if getControlTimestamp(storedEvent, 0) > getControlTimestamp(e, uint64(time.Now().UnixNano())) {
 			// Skip updating event data as stored data has newer timestamp
 			dLogger.WithFields(log.Fields{
 				"storedEvent":  storedEvent,
@@ -128,8 +128,8 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 	}
 }
 
-func getControlTimestamp(e models.IncomingEvent, defaultValue int64) int64 {
-	defer func(d int64) int64 {
+func getControlTimestamp(e models.IncomingEvent, defaultValue uint64) uint64 {
+	defer func(d uint64) uint64 {
 		if err := recover(); err != nil {
 			return d
 		}
@@ -141,16 +141,16 @@ func getControlTimestamp(e models.IncomingEvent, defaultValue int64) int64 {
 	// Type assertion from interface
 	switch v := value.(type) {
 	case int:
-		value = int64(v)
+		value = uint64(v)
 	case string:
-		parsed, err := strconv.ParseInt(v, 10, 64)
+		parsed, err := strconv.ParseUint(v, 10, 64)
 		if err != nil {
 			panic("unable to convert string timestamp")
 		}
 		value = parsed
 	}
 
-	return value.(int64)
+	return value.(uint64)
 }
 
 func getEventKey(s interfaces.StoreInterface, e models.IncomingEvent, d models.Destination) string {

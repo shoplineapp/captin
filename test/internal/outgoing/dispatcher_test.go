@@ -145,7 +145,7 @@ func TestDispatchEvents_Throttled_SkipUpdatingValue(t *testing.T) {
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 2},
-		Control:    map[string]interface{}{"ts": time.Now().Unix()},
+		Control:    map[string]interface{}{"ts": uint(time.Now().UnixNano())},
 		TargetType: "Product",
 		TargetId:   "product_id",
 	}, store, throttler)
