@@ -36,9 +36,9 @@ func (h HttpEventHandler) HandleEventCreation(c *gin.Context) {
 		return
 	}
 
-	_, err := h.captin.Execute(event)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	_, errs := h.captin.Execute(event)
+	if len(errs) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Error occurred when handling event"})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"code": "created"})

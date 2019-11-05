@@ -8,7 +8,7 @@ import (
 
 // CaptinInterface - Captin Interface
 type CaptinInterface interface {
-	Execute(e models.IncomingEvent) (bool, error)
+	Execute(e models.IncomingEvent) (bool, []error)
 }
 
 // EventSenderInterface - Event Sender Interface
