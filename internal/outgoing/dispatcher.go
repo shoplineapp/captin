@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
@@ -13,22 +14,11 @@ import (
 
 var dLogger = log.WithFields(log.Fields{"class": "Dispatcher"})
 
-// DispatcherError - Error when send events
-type DispatcherError struct {
-	msg         string
-	Event       models.IncomingEvent
-	Destination models.Destination
-}
-
-func (e *DispatcherError) Error() string {
-	return e.msg
-}
-
 // Dispatcher - Event Dispatcher
 type Dispatcher struct {
 	destinations  []models.Destination
 	senderMapping map[string]interfaces.EventSenderInterface
-	Errors        []error
+	Errors        []captin_errors.ErrorInterface
 }
 
 // NewDispatcherWithDestinations - Create Outgoing event dispatcher with destinations
@@ -38,7 +28,7 @@ func NewDispatcherWithDestinations(
 	result := Dispatcher{
 		destinations:  destinations,
 		senderMapping: senderMapping,
-		Errors:        []error{},
+		Errors:        []captin_errors.ErrorInterface{},
 	}
 
 	return &result
@@ -48,7 +38,7 @@ func NewDispatcherWithDestinations(
 func (d *Dispatcher) Dispatch(
 	e models.IncomingEvent,
 	store interfaces.StoreInterface,
-	throttler interfaces.ThrottleInterface) error {
+	throttler interfaces.ThrottleInterface) captin_errors.ErrorInterface {
 
 	for _, destination := range d.destinations {
 		canTrigger, timeRemain, err := throttler.CanTrigger(getEventKey(store, e, destination), destination.Config.GetThrottleValue())
@@ -76,8 +66,8 @@ func (d *Dispatcher) Dispatch(
 func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface) {
 	defer func() {
 		if err := recover(); err != nil {
-			d.Errors = append(d.Errors, &DispatcherError{
-				msg:         err.(error).Error(),
+			d.Errors = append(d.Errors, &captin_errors.DispatcherError{
+				Msg:         err.(error).Error(),
 				Destination: dest,
 				Event:       e,
 			})
@@ -173,8 +163,8 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	}
 	sender, senderExists := d.senderMapping[senderKey]
 	if senderExists == false {
-		d.Errors = append(d.Errors, &DispatcherError{
-			msg:         fmt.Sprintf("Sender key %s does not exist", senderKey),
+		d.Errors = append(d.Errors, &captin_errors.DispatcherError{
+			Msg:         fmt.Sprintf("Sender key %s does not exist", senderKey),
 			Destination: destination,
 			Event:       evt,
 		})
@@ -183,8 +173,8 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 
 	err := sender.SendEvent(evt, destination)
 	if err != nil {
-		d.Errors = append(d.Errors, &DispatcherError{
-			msg:         err.Error(),
+		d.Errors = append(d.Errors, &captin_errors.DispatcherError{
+			Msg:         err.Error(),
 			Destination: destination,
 			Event:       evt,
 		})

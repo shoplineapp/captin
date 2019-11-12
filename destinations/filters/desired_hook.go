@@ -1,4 +1,4 @@
-package outgoing_filters
+package destination_filters
 
 import (
 	interfaces "github.com/shoplineapp/captin/interfaces"
@@ -14,6 +14,14 @@ func ispresent(str string, list []string) bool {
 	return false
 }
 
+func stringList(list []interface{}) []string {
+	sList := make([]string, len(list))
+	for i, v := range list {
+		sList[i] = v.(string)
+	}
+	return sList
+}
+
 // DesiredHookFilter - Filter destination if given event has desired destination
 type DesiredHookFilter struct {
 	interfaces.DestinationFilter
@@ -21,7 +29,17 @@ type DesiredHookFilter struct {
 
 // Run - Get desired hooks in control and filter out exclusion
 func (f DesiredHookFilter) Run(e models.IncomingEvent, d models.Destination) (bool, error) {
-	return ispresent(d.Config.Name, e.Control["desired_hooks"].([]string)), nil
+	hook := d.Config.Name
+	list := e.Control["desired_hooks"]
+	switch list.(type) {
+	case []interface{}:
+		list = stringList(list.([]interface{}))
+		return ispresent(hook, list.([]string)), nil
+	case []string:
+		return ispresent(hook, list.([]string)), nil
+	default:
+		return false, nil
+	}
 }
 
 // Applicable - Check if desired hooks is present

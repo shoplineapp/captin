@@ -3,12 +3,13 @@ package interfaces
 import (
 	"time"
 
+	captin_errors "github.com/shoplineapp/captin/errors"
 	models "github.com/shoplineapp/captin/models"
 )
 
 // CaptinInterface - Captin Interface
 type CaptinInterface interface {
-	Execute(e models.IncomingEvent) (bool, []error)
+	Execute(e models.IncomingEvent) (bool, []captin_errors.ErrorInterface)
 }
 
 // EventSenderInterface - Event Sender Interface
