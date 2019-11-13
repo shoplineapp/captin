@@ -1,11 +1,11 @@
-package outgoing_filters_test
+package destination_filters_test
 
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 
+	. "github.com/shoplineapp/captin/destinations/filters"
 	helpers "github.com/shoplineapp/captin/internal/helpers"
-	. "github.com/shoplineapp/captin/internal/outgoing/filters"
 	models "github.com/shoplineapp/captin/models"
 )
 

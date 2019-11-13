@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	. "github.com/shoplineapp/captin/core"
+	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
 	"github.com/stretchr/testify/mock"
@@ -28,12 +29,12 @@ func TestNewCaptin(t *testing.T) {
 
 func TestExecute(t *testing.T) {
 	// When event is not given or is invalid
-	var errors []error
+	var errors []captin_errors.ErrorInterface
 
 	_, errors = Captin{}.Execute(models.IncomingEvent{})
 
 	if assert.Error(t, errors[0], "invalid incoming event") {
-		assert.IsType(t, errors[0], &ExecutionError{})
+		assert.IsType(t, errors[0], &captin_errors.ExecutionError{})
 	}
 }
 

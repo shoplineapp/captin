@@ -1,4 +1,4 @@
-package outgoing_filters
+package destination_filters
 
 import (
 	"encoding/json"

@@ -1,29 +1,19 @@
 package core
 
 import (
-	"fmt"
-
+	destination_filters "github.com/shoplineapp/captin/destinations/filters"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
-	outgoing_filters "github.com/shoplineapp/captin/internal/outgoing/filters"
 	models "github.com/shoplineapp/captin/models"
 	senders "github.com/shoplineapp/captin/senders"
 
+	captin_errors "github.com/shoplineapp/captin/errors"
 	stores "github.com/shoplineapp/captin/internal/stores"
 	throttles "github.com/shoplineapp/captin/internal/throttles"
 	log "github.com/sirupsen/logrus"
 )
 
 var cLogger = log.WithFields(log.Fields{"class": "Captin"})
-
-// ExecutionError - Error on executing events
-type ExecutionError struct {
-	Cause string
-}
-
-func (e *ExecutionError) Error() string {
-	return fmt.Sprintf("ExecutionError: caused by %s", e.Cause)
-}
 
 // Captin - Captin instance
 type Captin struct {
@@ -45,8 +35,9 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 	c := Captin{
 		ConfigMap: configMap,
 		filters: []interfaces.DestinationFilter{
-			outgoing_filters.ValidateFilter{},
-			outgoing_filters.SourceFilter{},
+			destination_filters.ValidateFilter{},
+			destination_filters.SourceFilter{},
+			destination_filters.DesiredHookFilter{},
 		},
 		SenderMapping: senderMapping,
 		store:         store,
@@ -81,9 +72,9 @@ func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSende
 }
 
 // Execute - Execute for events
-func (c Captin) Execute(e models.IncomingEvent) (bool, []error) {
+func (c Captin) Execute(e models.IncomingEvent) (bool, []captin_errors.ErrorInterface) {
 	if e.IsValid() != true {
-		return false, []error{&ExecutionError{Cause: "invalid incoming event object"}}
+		return false, []captin_errors.ErrorInterface{&captin_errors.ExecutionError{Cause: "invalid incoming event object"}}
 	}
 
 	configs := c.ConfigMap.ConfigsForKey(e.Key)
@@ -106,7 +97,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, []error) {
 
 	for _, err := range dispatcher.Errors {
 		switch dispatcherErr := err.(type) {
-		case *outgoing.DispatcherError:
+		case *captin_errors.DispatcherError:
 			cLogger.WithFields(log.Fields{
 				"event":       dispatcherErr.Event,
 				"destination": dispatcherErr.Destination,
