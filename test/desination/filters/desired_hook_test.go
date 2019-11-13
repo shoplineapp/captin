@@ -26,6 +26,19 @@ func TestDesiredHookFilterRunValidate(t *testing.T) {
 	}
 	assert.Equal(t, true, helpers.Tuples(DesiredHookFilter{}.Run(event, models.Destination{Config: models.Configuration{Name: "desired"}}))[0])
 	assert.Equal(t, false, helpers.Tuples(DesiredHookFilter{}.Run(event, models.Destination{Config: models.Configuration{Name: "not_desired"}}))[0])
+
+	// When event control contains multiple hooks
+	event = models.IncomingEvent{
+		Control: map[string]interface{}{
+			"desired_hooks": []interface{}{
+				"hook-1",
+				"hook-2",
+			},
+		},
+	}
+	assert.Equal(t, true, helpers.Tuples(DesiredHookFilter{}.Run(event, models.Destination{Config: models.Configuration{Name: "hook-1"}}))[0])
+	assert.Equal(t, true, helpers.Tuples(DesiredHookFilter{}.Run(event, models.Destination{Config: models.Configuration{Name: "hook-2"}}))[0])
+	assert.Equal(t, false, helpers.Tuples(DesiredHookFilter{}.Run(event, models.Destination{Config: models.Configuration{Name: "not_desired"}}))[0])
 }
 
 func TestDesiredHookFilterApplicable(t *testing.T) {

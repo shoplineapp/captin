@@ -5,7 +5,7 @@ import (
 	models "github.com/shoplineapp/captin/models"
 )
 
-func ispresent(str string, list []string) bool {
+func isPresent(str string, list []string) bool {
 	for _, v := range list {
 		if v == str {
 			return true
@@ -34,9 +34,9 @@ func (f DesiredHookFilter) Run(e models.IncomingEvent, d models.Destination) (bo
 	switch list.(type) {
 	case []interface{}:
 		list = stringList(list.([]interface{}))
-		return ispresent(hook, list.([]string)), nil
+		return isPresent(hook, list.([]string)), nil
 	case []string:
-		return ispresent(hook, list.([]string)), nil
+		return isPresent(hook, list.([]string)), nil
 	default:
 		return false, nil
 	}
