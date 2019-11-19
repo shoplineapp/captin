@@ -61,6 +61,9 @@ func (c *BeanstalkdSender) SendEvent(e models.IncomingEvent, d models.Destinatio
 
   bLogger.WithFields(log.Fields{
     "id": id,
+    "pri": pri,
+    "delay": delay,
+    "ttr": ttr,
     "jobBody": string(jobBody),
   }).Info("Enqueue job.")
 
