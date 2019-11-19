@@ -38,6 +38,19 @@ func (c *BeanstalkdSender) SendEvent(e models.IncomingEvent, d models.Destinatio
   }
 
   pri, delay, ttr := uint32(1), time.Duration(0), time.Duration(0)
+
+  if e.Control["priroty"] != nil {
+    pri = e.Control["priroty"].(uint32)
+  }
+
+  if e.Control["delay"] != nil {
+    delay = time.Duration(e.Control["delay"].(uint32))
+  }
+
+  if e.Control["ttr"] != nil {
+    ttr, err = time.ParseDuration(e.Control["ttr"].(string))
+  }
+
   id, err := conn.Put(jobBody, pri, delay, ttr)
   if err != nil {
     bLogger.WithFields(log.Fields{
