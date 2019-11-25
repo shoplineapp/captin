@@ -37,8 +37,23 @@ func (c *BeanstalkdSender) SendEvent(e models.IncomingEvent, d models.Destinatio
     return err
   }
 
-  pri, delay, ttr := uint32(1), time.Duration(0), time.Duration(0)
-  id, err := conn.Put(jobBody, pri, delay, ttr)
+  pri := uint32(65536)
+  var delay time.Duration
+  ttr := time.Duration(time.Minute)
+
+  if e.Control["priority"] != nil {
+    pri = e.Control["priority"].(uint32)
+  }
+
+  if e.Control["delay"] != nil {
+    delay, _ = time.ParseDuration(e.Control["delay"].(string))
+  }
+
+  if e.Control["ttr"] != nil {
+    ttr, _ = time.ParseDuration(e.Control["ttr"].(string))
+  }
+
+  id, err := conn.Put(jobBody, pri, time.Duration(delay), time.Duration(ttr))
   if err != nil {
     bLogger.WithFields(log.Fields{
       "error": err,
@@ -48,6 +63,9 @@ func (c *BeanstalkdSender) SendEvent(e models.IncomingEvent, d models.Destinatio
 
   bLogger.WithFields(log.Fields{
     "id": id,
+    "pri": pri,
+    "delay": delay,
+    "ttr": ttr,
     "jobBody": string(jobBody),
   }).Info("Enqueue job.")
 
