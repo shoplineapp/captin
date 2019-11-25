@@ -37,9 +37,9 @@ func (c *BeanstalkdSender) SendEvent(e models.IncomingEvent, d models.Destinatio
     return err
   }
 
-  var pri uint32 = 0
+  pri := uint32(65536)
   var delay time.Duration
-  var ttr time.Duration
+  ttr := time.Duration(time.Minute)
 
   if e.Control["priority"] != nil {
     pri = e.Control["priority"].(uint32)
