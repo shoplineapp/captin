@@ -41,8 +41,8 @@ func (c *BeanstalkdSender) SendEvent(e models.IncomingEvent, d models.Destinatio
   var delay time.Duration
   var ttr time.Duration
 
-  if e.Control["priroty"] != nil {
-    pri = e.Control["priroty"].(uint32)
+  if e.Control["priority"] != nil {
+    pri = e.Control["priority"].(uint32)
   }
 
   if e.Control["delay"] != nil {
