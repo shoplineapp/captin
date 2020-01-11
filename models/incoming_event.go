@@ -11,8 +11,9 @@ type IncomingEvent struct {
 	Control map[string]interface{} `json:"control"`   // Optional, custom control values from caller
 
 	// Optional with payload, Captin will try to fetch the document from the default database
-	TargetType string `json:"target_type"`
-	TargetId   string `json:"target_id"`
+	TargetType     string                  `json:"target_type"`
+	TargetId       string                  `json:"target_id"`
+	TargetDocument map[string]interface{}  `json:"target_document,omitempty"`
 }
 
 func NewIncomingEvent(data []byte) IncomingEvent {

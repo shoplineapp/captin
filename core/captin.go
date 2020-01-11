@@ -22,6 +22,7 @@ type Captin struct {
 	middlewares   []interfaces.DestinationMiddleware
 	SenderMapping map[string]interfaces.EventSenderInterface
 	store         interfaces.StoreInterface
+	documentStore interfaces.DocumentStoreInterface
 	throttler     interfaces.ThrottleInterface
 }
 
@@ -50,6 +51,11 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 func (c *Captin) SetStore(store interfaces.StoreInterface) {
 	c.store = store
 	c.throttler = throttles.NewThrottler(store)
+}
+
+// SetDocumentStore - Set store where event targets are being stored
+func (c *Captin) SetDocumentStore(documentStore interfaces.DocumentStoreInterface) {
+  c.documentStore = documentStore
 }
 
 // SetThrottler - Set throttle
@@ -93,7 +99,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, []captin_errors.ErrorInte
 
 	// Create dispatcher and dispatch events
 	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, c.SenderMapping)
-	dispatcher.Dispatch(e, c.store, c.throttler)
+	dispatcher.Dispatch(e, c.store, c.throttler, c.documentStore)
 
 	for _, err := range dispatcher.Errors {
 		switch dispatcherErr := err.(type) {

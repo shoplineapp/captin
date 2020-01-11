@@ -16,9 +16,10 @@ var dLogger = log.WithFields(log.Fields{"class": "Dispatcher"})
 
 // Dispatcher - Event Dispatcher
 type Dispatcher struct {
-	destinations  []models.Destination
-	senderMapping map[string]interfaces.EventSenderInterface
-	Errors        []captin_errors.ErrorInterface
+	destinations   []models.Destination
+	senderMapping  map[string]interfaces.EventSenderInterface
+	Errors         []captin_errors.ErrorInterface
+	targetDocument map[string]interface{}
 }
 
 // NewDispatcherWithDestinations - Create Outgoing event dispatcher with destinations
@@ -38,7 +39,9 @@ func NewDispatcherWithDestinations(
 func (d *Dispatcher) Dispatch(
 	e models.IncomingEvent,
 	store interfaces.StoreInterface,
-	throttler interfaces.ThrottleInterface) captin_errors.ErrorInterface {
+	throttler interfaces.ThrottleInterface,
+	documentStore interfaces.DocumentStoreInterface,
+) captin_errors.ErrorInterface {
 
 	for _, destination := range d.destinations {
 		canTrigger, timeRemain, err := throttler.CanTrigger(getEventKey(store, e, destination), destination.Config.GetThrottleValue())
@@ -48,22 +51,37 @@ func (d *Dispatcher) Dispatch(
 			d.Errors = append(d.Errors, err)
 
 			// Send without throttling
-			go d.sendEvent(e, destination)
+			go d.sendEvent(e, destination, documentStore)
 			continue
 		}
 
 		if canTrigger {
-			go d.sendEvent(e, destination)
+			go d.sendEvent(e, destination, documentStore)
 		} else {
-			d.processDelayedEvent(e, timeRemain, destination, store)
+			d.processDelayedEvent(e, timeRemain, destination, store, documentStore)
 		}
 	}
 	return nil
 }
 
 // Private Functions
+func (d *Dispatcher) cloneEventWithDocument(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) models.IncomingEvent {
+	if destination.Config.IncludeDocument == false {
+		return e;
+	}
 
-func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface) {
+	// memoization document to be used across events for diff. destinations
+	if d.targetDocument == nil {
+		d.targetDocument = documentStore.GetDocument(e)
+	}
+
+	clone := e
+	clone.TargetDocument = d.targetDocument
+
+	return clone
+}
+
+func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
 	defer func() {
 		if err := recover(); err != nil {
 			d.Errors = append(d.Errors, &captin_errors.DispatcherError{
@@ -114,7 +132,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		}
 
 		// Schedule send event later
-		time.AfterFunc(timeRemain, d.sendAfterEvent(dataKey, store, dest))
+		time.AfterFunc(timeRemain, d.sendAfterEvent(dataKey, store, dest, documentStore))
 	}
 }
 
@@ -151,11 +169,13 @@ func getEventDataKey(s interfaces.StoreInterface, e models.IncomingEvent, d mode
 	return s.DataKey(e, d, "", "-data")
 }
 
-func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Destination) {
+func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
 	callbackLogger := dLogger.WithFields(log.Fields{
 		"callback_url": destination.Config.CallbackURL,
 	})
 	callbackLogger.Debug("Ready to send event")
+
+	evtWithDoc := d.cloneEventWithDocument(evt, destination, documentStore)
 
 	senderKey := destination.Config.Sender
 	if senderKey == "" {
@@ -166,30 +186,30 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		d.Errors = append(d.Errors, &captin_errors.DispatcherError{
 			Msg:         fmt.Sprintf("Sender key %s does not exist", senderKey),
 			Destination: destination,
-			Event:       evt,
+			Event:       evtWithDoc,
 		})
 		return
 	}
 
-	err := sender.SendEvent(evt, destination)
+	err := sender.SendEvent(evtWithDoc, destination)
 	if err != nil {
 		d.Errors = append(d.Errors, &captin_errors.DispatcherError{
 			Msg:         err.Error(),
 			Destination: destination,
-			Event:       evt,
+			Event:       evtWithDoc,
 		})
 		return
 	}
 	callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s", destination.Config.CallbackURL))
 }
 
-func (d *Dispatcher) sendAfterEvent(key string, store interfaces.StoreInterface, dest models.Destination) func() {
+func (d *Dispatcher) sendAfterEvent(key string, store interfaces.StoreInterface, dest models.Destination, documentStore interfaces.DocumentStoreInterface) func() {
 	dLogger.WithFields(log.Fields{"key": key}).Debug("After event callback")
 	payload, _, _, _ := store.Get(key)
 	event := models.IncomingEvent{}
 	json.Unmarshal([]byte(payload), &event)
 	return func() {
-		d.sendEvent(event, dest)
+		d.sendEvent(event, dest, documentStore)
 		store.Remove(key)
 	}
 }
