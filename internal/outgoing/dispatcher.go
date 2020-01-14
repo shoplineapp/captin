@@ -70,7 +70,7 @@ func (d *Dispatcher) cloneEventWithDocument(e models.IncomingEvent, destination 
 		return e;
 	}
 
-	// memoization document to be used across events for diff. destinations
+	// memoize document to be used across events for diff. destinations
 	if d.targetDocument == nil {
 		d.targetDocument = documentStore.GetDocument(e)
 	}
