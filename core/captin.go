@@ -9,6 +9,7 @@ import (
 
 	captin_errors "github.com/shoplineapp/captin/errors"
 	stores "github.com/shoplineapp/captin/internal/stores"
+	documentStores "github.com/shoplineapp/captin/internal/document_stores"
 	throttles "github.com/shoplineapp/captin/internal/throttles"
 	log "github.com/sirupsen/logrus"
 )
@@ -29,6 +30,7 @@ type Captin struct {
 // NewCaptin - Create Captin instance with default http senders and time throttler
 func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 	store := stores.NewMemoryStore()
+	documentStore := documentStores.NewNullDocumentStore()
 	senderMapping := map[string]interfaces.EventSenderInterface{
 		"http":       &senders.HTTPEventSender{},
 		"beanstalkd": &senders.BeanstalkdSender{},
@@ -42,6 +44,7 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 		},
 		SenderMapping: senderMapping,
 		store:         store,
+		documentStore: documentStore,
 		throttler:     throttles.NewThrottler(store),
 	}
 	return &c
