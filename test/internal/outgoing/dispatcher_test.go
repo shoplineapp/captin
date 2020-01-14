@@ -17,8 +17,9 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setup(path string) (*mocks.StoreMock, *mocks.SenderMock, *outgoing.Dispatcher, *mocks.ThrottleMock) {
+func setup(path string) (*mocks.StoreMock, *mocks.DocumentStoreMock, *mocks.SenderMock, *outgoing.Dispatcher, *mocks.ThrottleMock) {
 	store := new(mocks.StoreMock)
+	documentstore := new(mocks.DocumentStoreMock)
 	sender := new(mocks.SenderMock)
 	senderMapping := map[string]interfaces.EventSenderInterface{
 		"mock": sender,
@@ -38,11 +39,19 @@ func setup(path string) (*mocks.StoreMock, *mocks.SenderMock, *outgoing.Dispatch
 
 	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, senderMapping)
 
-	return store, sender, dispatcher, throttler
+	return store, documentstore, sender, dispatcher, throttler
+}
+
+func hasNoDocument(e models.IncomingEvent) bool {
+	return e.TargetDocument == nil
+}
+
+func hasDocument(e models.IncomingEvent) bool {
+	return hasNoDocument(e) != true
 }
 
 func TestDispatchEvents_Error(t *testing.T) {
-	store, sender, dispatcher, throttler := setup("fixtures/config.json")
+	store, documentStore, sender, dispatcher, throttler := setup("fixtures/config.json")
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(errors.New("Mock Error"))
 	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
@@ -55,7 +64,7 @@ func TestDispatchEvents_Error(t *testing.T) {
 		Payload:    map[string]interface{}{"field1": 1},
 		TargetType: "Product",
 		TargetId:   "product_id",
-	}, store, throttler)
+	}, store, throttler, documentStore)
 
 	dispatcher.Dispatch(models.IncomingEvent{
 		Key:        "product.update",
@@ -63,7 +72,7 @@ func TestDispatchEvents_Error(t *testing.T) {
 		Payload:    map[string]interface{}{"field1": 2},
 		TargetType: "Product",
 		TargetId:   "product_id_2",
-	}, store, throttler)
+	}, store, throttler, documentStore)
 
 	time.Sleep(50 * time.Millisecond)
 
@@ -72,7 +81,7 @@ func TestDispatchEvents_Error(t *testing.T) {
 }
 
 func TestDispatchEvents(t *testing.T) {
-	store, sender, dispatcher, throttler := setup("fixtures/config.json")
+	store, documentStore, sender, dispatcher, throttler := setup("fixtures/config.json")
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
 	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
@@ -85,7 +94,7 @@ func TestDispatchEvents(t *testing.T) {
 		Payload:    map[string]interface{}{"field1": 1},
 		TargetType: "Product",
 		TargetId:   "product_id",
-	}, store, throttler)
+	}, store, throttler, documentStore)
 
 	dispatcher.Dispatch(models.IncomingEvent{
 		Key:        "product.update",
@@ -93,7 +102,7 @@ func TestDispatchEvents(t *testing.T) {
 		Payload:    map[string]interface{}{"field1": 2},
 		TargetType: "Product",
 		TargetId:   "product_id_2",
-	}, store, throttler)
+	}, store, throttler, documentStore)
 
 	time.Sleep(50 * time.Millisecond)
 
@@ -101,7 +110,7 @@ func TestDispatchEvents(t *testing.T) {
 }
 
 func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
-	store, sender, dispatcher, throttler := setup("fixtures/config.single.json")
+	store, documentStore, sender, dispatcher, throttler := setup("fixtures/config.single.json")
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
 	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
@@ -115,7 +124,7 @@ func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
 		Payload:    map[string]interface{}{"field1": 1},
 		TargetType: "Product",
 		TargetId:   "product_id",
-	}, store, throttler)
+	}, store, throttler, documentStore)
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
 
@@ -131,7 +140,7 @@ func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
 }
 
 func TestDispatchEvents_Throttled_SkipUpdatingValue(t *testing.T) {
-	store, sender, dispatcher, throttler := setup("fixtures/config.single.json")
+	store, documentStore, sender, dispatcher, throttler := setup("fixtures/config.single.json")
 	throttleID := "product.update.service_one.product_id-data"
 	throttlePeriod := time.Millisecond * 700 * 2
 
@@ -148,7 +157,7 @@ func TestDispatchEvents_Throttled_SkipUpdatingValue(t *testing.T) {
 		Control:    map[string]interface{}{"ts": uint(time.Now().UnixNano())},
 		TargetType: "Product",
 		TargetId:   "product_id",
-	}, store, throttler)
+	}, store, throttler, documentStore)
 
 	// Expecting update of store is skipped due to older timestamp from new incoming event
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
@@ -157,7 +166,7 @@ func TestDispatchEvents_Throttled_SkipUpdatingValue(t *testing.T) {
 }
 
 func TestDispatchEvents_Throttled_UpdatePayload(t *testing.T) {
-	store, sender, dispatcher, throttler := setup("fixtures/config.single.json")
+	store, documentStore, sender, dispatcher, throttler := setup("fixtures/config.single.json")
 	throttleID := "product.update.service_one.product_id-data"
 	throttlePeriod := time.Millisecond * 700 * 2
 
@@ -174,9 +183,33 @@ func TestDispatchEvents_Throttled_UpdatePayload(t *testing.T) {
 		Payload:    map[string]interface{}{"field1": 2},
 		TargetType: "Product",
 		TargetId:   "product_id",
-	}, store, throttler)
+	}, store, throttler, documentStore)
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
 	store.AssertCalled(t, "Get", throttleID)
 	store.AssertCalled(t, "Update", throttleID, `{"event_key":"product.update","source":"core","payload":{"field1":2},"control":null,"target_type":"Product","target_id":"product_id"}`)
+}
+
+func TestDispatchEvents_With_Document(t *testing.T) {
+	store, documentStore, sender, dispatcher, throttler := setup("fixtures/config.include_document.json")
+
+	sender.On("SendEvent", mock.MatchedBy(hasDocument), mock.Anything).Return(nil)
+	sender.On("SendEvent", mock.MatchedBy(hasNoDocument), mock.Anything).Return(nil)
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	documentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{"foo": "bar"})
+
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 1},
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStore)
+
+	time.Sleep(50 * time.Millisecond)
+
+	sender.AssertExpectations(t)
 }
