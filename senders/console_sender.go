@@ -16,6 +16,7 @@ func (c *ConsoleEventSender) SendEvent(e models.IncomingEvent, d models.Destinat
 		"config_name": d.Config.Name,
 		"target_id":   e.TargetId,
 		"target_type": e.TargetType,
+		"target_document": e.TargetDocument,
 	}).Debug("Event sent")
 	return nil
 }
