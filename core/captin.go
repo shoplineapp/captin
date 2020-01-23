@@ -41,6 +41,7 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 			destination_filters.ValidateFilter{},
 			destination_filters.SourceFilter{},
 			destination_filters.DesiredHookFilter{},
+			destination_filters.EnvironmentFilter{},
 		},
 		SenderMapping: senderMapping,
 		store:         store,
