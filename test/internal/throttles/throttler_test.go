@@ -35,6 +35,20 @@ func TestThrottler_CreateStoreRecord(t *testing.T) {
 	store.AssertCalled(t, "Set", throttleID, "1", throttlePeriod)
 }
 
+func TestThrottler_NoThrottleSet(t *testing.T) {
+	throttleID, _, store := setup()
+	throttlePeriod := time.Duration(0)
+
+	subject := throttles.NewThrottler(store)
+	result, duration, err := subject.CanTrigger(throttleID, throttlePeriod)
+	assert.True(t, result)
+	assert.Equal(t, time.Duration(0), duration)
+	assert.Nil(t, err)
+
+	store.AssertNotCalled(t, "Get", throttleID)
+	store.AssertNotCalled(t, "Set", throttleID, "1", throttlePeriod)
+}
+
 func TestThrottler_Reject(t *testing.T) {
 	throttleID, throttlePeriod, store := setup()
 

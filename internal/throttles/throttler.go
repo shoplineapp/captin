@@ -24,6 +24,11 @@ func NewThrottler(store interfaces.StoreInterface) *Throttler {
 
 // CanTrigger - Check if can trigger
 func (t *Throttler) CanTrigger(id string, period time.Duration) (bool, time.Duration, error) {
+	// ignore throttle if no period is given
+	if period == time.Duration(0) {
+		return true, time.Duration(0), nil
+	}
+
 	val, ok, duration, err := t.store.Get(id)
 
 	if err != nil {
@@ -31,7 +36,7 @@ func (t *Throttler) CanTrigger(id string, period time.Duration) (bool, time.Dura
 	}
 	tLogger.WithFields(log.Fields{"value": val}).Debug("Check throttle value on CanTrigger")
 	if !ok {
-		tLogger.WithFields(log.Fields{"period": period}).Error("Unable to create throttle in store with period")
+		tLogger.WithFields(log.Fields{"period": period}).Debug("Throttle value not set, creating...")
 		t.store.Set(id, "1", period)
 		return true, time.Duration(0), nil
 	}
