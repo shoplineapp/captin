@@ -3,6 +3,7 @@
     "id": "1",
     "callback_url": "https://postman-echo.com/post",
     "throttle": "500ms",
+    "throttle_trailing": true,
     "actions": [
       "product.update"
     ],
