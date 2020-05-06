@@ -2,6 +2,7 @@
   {
     "callback_url": "https://postman-echo.com/post",
     "throttle": "100ms",
+    "disable_trailing": true,
     "actions": [
       "product.update",
       "product.create",

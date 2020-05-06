@@ -14,7 +14,7 @@ type Configuration struct {
 	Actions          []string `json:"actions"`
 	Source           string   `json:"source"`
 	Throttle         string   `json:"throttle"`
-	ThrottleTrailing bool     `json:"throttle_trailing"`
+	DisableTrailing  bool     `json:"disable_trailing"`
 	IncludeDocument  bool     `json:"include_document"`
 	Name             string   `json:"name"`
 	AllowLoopback    bool     `json:"allow_loopback"`

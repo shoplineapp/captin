@@ -4,7 +4,6 @@
     "callback_url": "https://postman-echo.com/post",
     "validate": "obj.wapos_id",
     "throttle": "500ms",
-    "throttle_trailing": true,
     "actions": [
       "product.update",
       "product.create",
@@ -22,7 +21,6 @@
     "id": "2",
     "callback_url": "https://postman-echo.com/post",
     "throttle": "500ms",
-    "throttle_trailing": true,
     "actions": [
       "product.update",
       "product.create",
