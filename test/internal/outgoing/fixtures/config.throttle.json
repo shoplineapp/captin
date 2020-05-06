@@ -1,0 +1,14 @@
+[
+  {
+    "callback_url": "https://postman-echo.com/post",
+    "throttle": "100ms",
+    "actions": [
+      "product.update",
+      "product.create",
+      "user.create"
+    ],
+    "source": "open-api",
+    "name": "service_two",
+    "sender": "mock"
+  }
+]
