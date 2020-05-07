@@ -57,7 +57,7 @@ func (d *Dispatcher) Dispatch(
 
 		if canTrigger {
 			go d.sendEvent(e, destination, documentStore)
-		} else if !destination.Config.DisableTrailing {
+		} else if !destination.Config.ThrottleTrailingDisabled {
 			d.processDelayedEvent(e, timeRemain, destination, store, documentStore)
 		}
 	}

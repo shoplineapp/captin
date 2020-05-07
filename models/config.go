@@ -8,17 +8,17 @@ import (
 
 // Configuration - Webhook Configuration Model
 type Configuration struct {
-	ConfigID         string   `json:"id"`
-	CallbackURL      string   `json:"callback_url"`
-	Validate         string   `json:"validate"`
-	Actions          []string `json:"actions"`
-	Source           string   `json:"source"`
-	Throttle         string   `json:"throttle"`
-	DisableTrailing  bool     `json:"disable_trailing"`
-	IncludeDocument  bool     `json:"include_document"`
-	Name             string   `json:"name"`
-	AllowLoopback    bool     `json:"allow_loopback"`
-	Sender           string   `json:"sender"`
+	ConfigID                 string   `json:"id"`
+	CallbackURL              string   `json:"callback_url"`
+	Validate                 string   `json:"validate"`
+	Actions                  []string `json:"actions"`
+	Source                   string   `json:"source"`
+	Throttle                 string   `json:"throttle"`
+	ThrottleTrailingDisabled bool     `json:"throttle_trailing_disabled"`
+	IncludeDocument          bool     `json:"include_document"`
+	Name                     string   `json:"name"`
+	AllowLoopback            bool     `json:"allow_loopback"`
+	Sender                   string   `json:"sender"`
 }
 
 // GetThrottleValue - Get Throttle Value in millisecond
