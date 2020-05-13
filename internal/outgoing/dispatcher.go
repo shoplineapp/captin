@@ -67,7 +67,7 @@ func (d *Dispatcher) Dispatch(
 // Private Functions
 func (d *Dispatcher) cloneEventWithDocument(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) models.IncomingEvent {
 	if destination.Config.IncludeDocument == false {
-		return e;
+		return e
 	}
 
 	// memoize document to be used across events for diff. destinations
@@ -171,7 +171,7 @@ func getEventDataKey(s interfaces.StoreInterface, e models.IncomingEvent, d mode
 
 func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
 	callbackLogger := dLogger.WithFields(log.Fields{
-		"callback_url": destination.Config.CallbackURL,
+		"callback_url": destination.GetCallbackURL(),
 	})
 	callbackLogger.Debug("Ready to send event")
 
@@ -200,7 +200,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		})
 		return
 	}
-	callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s", destination.Config.CallbackURL))
+	callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s", destination.GetCallbackURL()))
 }
 
 func (d *Dispatcher) sendAfterEvent(key string, store interfaces.StoreInterface, dest models.Destination, documentStore interfaces.DocumentStoreInterface) func() {

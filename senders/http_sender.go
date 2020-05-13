@@ -28,7 +28,7 @@ type HTTPEventSender struct {
 
 // SendEvent - #HttpEventSender SendEvent
 func (c *HTTPEventSender) SendEvent(e models.IncomingEvent, d models.Destination) error {
-	url := d.Config.CallbackURL
+	url := d.GetCallbackURL()
 	payload, err := json.Marshal(e)
 
 	if err != nil {

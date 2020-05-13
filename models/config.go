@@ -1,8 +1,11 @@
 package models
 
 import (
+	"fmt"
+	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -19,6 +22,11 @@ type Configuration struct {
 	Name                     string   `json:"name"`
 	AllowLoopback            bool     `json:"allow_loopback"`
 	Sender                   string   `json:"sender"`
+}
+
+func (c Configuration) GetByEnv(key string) (string, string) {
+	envKey := fmt.Sprintf("HOOK_%s_%s", strings.ToUpper(c.Name), strings.ToUpper(key))
+	return envKey, os.Getenv(envKey)
 }
 
 // GetThrottleValue - Get Throttle Value in millisecond
