@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"testing"
 	"time"
+	"reflect"
 
 	"github.com/stretchr/testify/assert"
 
@@ -212,6 +213,104 @@ func TestDispatchEvents_With_Document(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	sender.AssertExpectations(t)
+}
+
+func TestDispatchEvents_With_Include_Document_Attrs(t *testing.T) {
+	store, documentStore, sender, dispatcher, throttler := setup("fixtures/config.include_document_attrs.json")
+
+	sender.On("SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+		return reflect.DeepEqual(e.TargetDocument, map[string]interface{}{ "foo" : map[string]interface{}{ "bar" : "yo" } })
+	}), mock.Anything).Return(nil)
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	documentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{ "foo" : map[string]interface{}{ "bar" : "yo", "a" : "b" }, "foo2" : "bar2" })
+
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 1},
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStore)
+
+	time.Sleep(50 * time.Millisecond)
+
+	sender.AssertExpectations(t)
+}
+
+func TestDispatchEvents_With_Exclude_Document_Attrs(t *testing.T) {
+	store, documentStore, sender, dispatcher, throttler := setup("fixtures/config.exclude_document_attrs.json")
+
+	sender.On("SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+		return reflect.DeepEqual(e.TargetDocument, map[string]interface{}{ "foo" : map[string]interface{}{ "a" : "b" }, "foo2" : "bar2" })
+	}), mock.Anything).Return(nil)
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	documentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{ "foo" : map[string]interface{}{ "bar" : "yo", "a" : "b" }, "foo2" : "bar2" })
+
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 1},
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStore)
+
+	time.Sleep(50 * time.Millisecond)
+
+	sender.AssertExpectations(t)
+}
+
+func TestDispatchEvents_With_Include_Payload_Attrs(t *testing.T) {
+  store, documentStore, sender, dispatcher, throttler := setup("fixtures/config.include_payload_attrs.json")
+
+  sender.On("SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+    return reflect.DeepEqual(e.Payload, map[string]interface{}{ "field1" : 1 })
+  }), mock.Anything).Return(nil)
+  store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+  store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+
+  throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+
+  dispatcher.Dispatch(models.IncomingEvent{
+    Key:        "product.update",
+    Source:     "core",
+    Payload:    map[string]interface{}{"field1": 1, "field2": 2},
+    TargetType: "Product",
+    TargetId:   "product_id",
+  }, store, throttler, documentStore)
+
+  time.Sleep(50 * time.Millisecond)
+
+  sender.AssertExpectations(t)
+}
+
+func TestDispatchEvents_With_Exclude_Payload_Attrs(t *testing.T) {
+  store, documentStore, sender, dispatcher, throttler := setup("fixtures/config.exclude_payload_attrs.json")
+
+  sender.On("SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+    return reflect.DeepEqual(e.Payload, map[string]interface{}{ "field2" : 2 })
+  }), mock.Anything).Return(nil)
+  store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+  store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+
+  throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+
+  dispatcher.Dispatch(models.IncomingEvent{
+    Key:        "product.update",
+    Source:     "core",
+    Payload:    map[string]interface{}{"field1": 1, "field2": 2},
+    TargetType: "Product",
+    TargetId:   "product_id",
+  }, store, throttler, documentStore)
+
+  time.Sleep(50 * time.Millisecond)
+
+  sender.AssertExpectations(t)
 }
 
 func TestDispatchEvents_Throttled_Without_TrailingEdge(t *testing.T) {
