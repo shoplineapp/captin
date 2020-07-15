@@ -9,6 +9,7 @@ import (
 	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
+	helpers "github.com/shoplineapp/captin/internal/helpers"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -76,7 +77,14 @@ func (d *Dispatcher) cloneEventWithDocument(e models.IncomingEvent, destination 
 	}
 
 	clone := e
-	clone.TargetDocument = d.targetDocument
+
+	if (len(destination.Config.IncludeDocumentAttrs) >= 1) {
+		clone.TargetDocument = helpers.IncludeFields(d.targetDocument, destination.Config.IncludeDocumentAttrs).(map[string]interface{})
+	} else if (len(destination.Config.ExcludeDocumentAttrs) >= 1) {
+		clone.TargetDocument = helpers.ExcludeFields(d.targetDocument, destination.Config.ExcludeDocumentAttrs).(map[string]interface{})
+	} else {
+		clone.TargetDocument = d.targetDocument
+	}
 
 	return clone
 }

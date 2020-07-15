@@ -1,0 +1,21 @@
+[
+  {
+    "id": "1",
+    "callback_url": "https://postman-echo.com/post",
+    "validate": "obj.wapos_id",
+    "throttle": "500ms",
+    "actions": [
+      "product.update",
+      "product.create",
+      "user.create",
+      "user.update",
+      "order.create",
+      "order.update"
+    ],
+    "source": "core-api",
+    "name": "service_one",
+    "include_document": true,
+    "include_document_attrs": ["foo.bar"],
+    "sender": "mock"
+  }
+]
