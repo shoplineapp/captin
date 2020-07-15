@@ -24,6 +24,8 @@ type Configuration struct {
 	Sender                   string   `json:"sender"`
 	IncludeDocumentAttrs     []string   `json:"include_document_attrs"`
 	ExcludeDocumentAttrs     []string   `json:"exclude_document_attrs"`
+	IncludePayloadAttrs      []string   `json:"include_payload_attrs"`
+	ExcludePayloadAttrs      []string   `json:"exclude_payload_attrs"`
 }
 
 func (c Configuration) GetByEnv(key string) (string, string) {

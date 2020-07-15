@@ -66,27 +66,46 @@ func (d *Dispatcher) Dispatch(
 }
 
 // Private Functions
-func (d *Dispatcher) cloneEventWithDocument(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) models.IncomingEvent {
+
+// inject document and sanitize fields in event based on destination
+func (d *Dispatcher) customizeEvent(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) models.IncomingEvent {
+	customized := e
+
+	d.customizeDocument(&customized, destination, documentStore)
+	d.customizePayload(&customized, destination)
+
+	return customized
+}
+
+func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
 	if destination.Config.IncludeDocument == false {
-		return e
+		return
 	}
 
 	// memoize document to be used across events for diff. destinations
 	if d.targetDocument == nil {
-		d.targetDocument = documentStore.GetDocument(e)
+		d.targetDocument = documentStore.GetDocument(*e)
 	}
-
-	clone := e
 
 	if (len(destination.Config.IncludeDocumentAttrs) >= 1) {
-		clone.TargetDocument = helpers.IncludeFields(d.targetDocument, destination.Config.IncludeDocumentAttrs).(map[string]interface{})
+		e.TargetDocument = helpers.IncludeFields(d.targetDocument, destination.Config.IncludeDocumentAttrs).(map[string]interface{})
 	} else if (len(destination.Config.ExcludeDocumentAttrs) >= 1) {
-		clone.TargetDocument = helpers.ExcludeFields(d.targetDocument, destination.Config.ExcludeDocumentAttrs).(map[string]interface{})
+		e.TargetDocument = helpers.ExcludeFields(d.targetDocument, destination.Config.ExcludeDocumentAttrs).(map[string]interface{})
 	} else {
-		clone.TargetDocument = d.targetDocument
+		e.TargetDocument = d.targetDocument
 	}
 
-	return clone
+	return
+}
+
+func (d *Dispatcher) customizePayload(e *models.IncomingEvent, destination models.Destination) {
+  if (len(destination.Config.IncludePayloadAttrs) >= 1) {
+    e.Payload = helpers.IncludeFields(e.Payload, destination.Config.IncludePayloadAttrs).(map[string]interface{})
+  } else if (len(destination.Config.ExcludePayloadAttrs) >= 1) {
+    e.Payload = helpers.ExcludeFields(e.Payload, destination.Config.ExcludePayloadAttrs).(map[string]interface{})
+  }
+
+  return
 }
 
 func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
@@ -183,7 +202,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	})
 	callbackLogger.Debug("Ready to send event")
 
-	evtWithDoc := d.cloneEventWithDocument(evt, destination, documentStore)
+	customizedEvt := d.customizeEvent(evt, destination, documentStore)
 
 	senderKey := destination.Config.Sender
 	if senderKey == "" {
@@ -194,17 +213,17 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		d.Errors = append(d.Errors, &captin_errors.DispatcherError{
 			Msg:         fmt.Sprintf("Sender key %s does not exist", senderKey),
 			Destination: destination,
-			Event:       evtWithDoc,
+			Event:       customizedEvt,
 		})
 		return
 	}
 
-	err := sender.SendEvent(evtWithDoc, destination)
+	err := sender.SendEvent(customizedEvt, destination)
 	if err != nil {
 		d.Errors = append(d.Errors, &captin_errors.DispatcherError{
 			Msg:         err.Error(),
 			Destination: destination,
-			Event:       evtWithDoc,
+			Event:       customizedEvt,
 		})
 		return
 	}
