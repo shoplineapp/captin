@@ -8,12 +8,14 @@ import (
 
 	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/models"
+	documentStores "github.com/shoplineapp/captin/internal/document_stores"
 	helpers "github.com/shoplineapp/captin/internal/helpers"
+	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
 
 var dLogger = log.WithFields(log.Fields{"class": "Dispatcher"})
+var nullDocumentStore = documentStores.NewNullDocumentStore()
 
 // Dispatcher - Event Dispatcher
 type Dispatcher struct {
@@ -41,11 +43,11 @@ func (d *Dispatcher) Dispatch(
 	e models.IncomingEvent,
 	store interfaces.StoreInterface,
 	throttler interfaces.ThrottleInterface,
-	documentStore interfaces.DocumentStoreInterface,
+	documentStoreMappings map[string]interfaces.DocumentStoreInterface,
 ) captin_errors.ErrorInterface {
-
 	for _, destination := range d.destinations {
 		canTrigger, timeRemain, err := throttler.CanTrigger(getEventKey(store, e, destination), destination.Config.GetThrottleValue())
+		documentStore := d.getDocumentStore(destination, documentStoreMappings)
 
 		if err != nil {
 			dLogger.WithFields(log.Fields{"event": e, "destination": destination}).Error("Failed to dispatch event")
@@ -67,6 +69,13 @@ func (d *Dispatcher) Dispatch(
 
 // Private Functions
 
+func (d Dispatcher) getDocumentStore(dest models.Destination, documentStoreMappings map[string]interfaces.DocumentStoreInterface) interfaces.DocumentStoreInterface {
+	if documentStoreMappings[dest.GetDocumentStore()] != nil {
+		return documentStoreMappings[dest.GetDocumentStore()]
+	}
+	return nullDocumentStore
+}
+
 // inject document and sanitize fields in event based on destination
 func (d *Dispatcher) customizeEvent(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) models.IncomingEvent {
 	customized := e
@@ -87,9 +96,9 @@ func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination mode
 		d.targetDocument = documentStore.GetDocument(*e)
 	}
 
-	if (len(destination.Config.IncludeDocumentAttrs) >= 1) {
+	if len(destination.Config.IncludeDocumentAttrs) >= 1 {
 		e.TargetDocument = helpers.IncludeFields(d.targetDocument, destination.Config.IncludeDocumentAttrs).(map[string]interface{})
-	} else if (len(destination.Config.ExcludeDocumentAttrs) >= 1) {
+	} else if len(destination.Config.ExcludeDocumentAttrs) >= 1 {
 		e.TargetDocument = helpers.ExcludeFields(d.targetDocument, destination.Config.ExcludeDocumentAttrs).(map[string]interface{})
 	} else {
 		e.TargetDocument = d.targetDocument
@@ -99,13 +108,13 @@ func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination mode
 }
 
 func (d *Dispatcher) customizePayload(e *models.IncomingEvent, destination models.Destination) {
-  if (len(destination.Config.IncludePayloadAttrs) >= 1) {
-    e.Payload = helpers.IncludeFields(e.Payload, destination.Config.IncludePayloadAttrs).(map[string]interface{})
-  } else if (len(destination.Config.ExcludePayloadAttrs) >= 1) {
-    e.Payload = helpers.ExcludeFields(e.Payload, destination.Config.ExcludePayloadAttrs).(map[string]interface{})
-  }
+	if len(destination.Config.IncludePayloadAttrs) >= 1 {
+		e.Payload = helpers.IncludeFields(e.Payload, destination.Config.IncludePayloadAttrs).(map[string]interface{})
+	} else if len(destination.Config.ExcludePayloadAttrs) >= 1 {
+		e.Payload = helpers.ExcludeFields(e.Payload, destination.Config.ExcludePayloadAttrs).(map[string]interface{})
+	}
 
-  return
+	return
 }
 
 func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
@@ -198,7 +207,13 @@ func getEventDataKey(s interfaces.StoreInterface, e models.IncomingEvent, d mode
 
 func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
 	callbackLogger := dLogger.WithFields(log.Fields{
+		"action": evt.Key,
+		"target": map[string]string{
+			"type": evt.TargetType,
+			"id": evt.TargetId,
+		},
 		"callback_url": destination.GetCallbackURL(),
+		"document_store": destination.GetDocumentStore(),
 	})
 	callbackLogger.Debug("Ready to send event")
 
