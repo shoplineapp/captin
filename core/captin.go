@@ -8,8 +8,8 @@ import (
 	senders "github.com/shoplineapp/captin/senders"
 
 	captin_errors "github.com/shoplineapp/captin/errors"
-	stores "github.com/shoplineapp/captin/internal/stores"
 	documentStores "github.com/shoplineapp/captin/internal/document_stores"
+	stores "github.com/shoplineapp/captin/internal/stores"
 	throttles "github.com/shoplineapp/captin/internal/throttles"
 	log "github.com/sirupsen/logrus"
 )
@@ -18,19 +18,18 @@ var cLogger = log.WithFields(log.Fields{"class": "Captin"})
 
 // Captin - Captin instance
 type Captin struct {
-	ConfigMap     interfaces.ConfigMapperInterface
-	filters       []interfaces.DestinationFilter
-	middlewares   []interfaces.DestinationMiddleware
-	SenderMapping map[string]interfaces.EventSenderInterface
-	store         interfaces.StoreInterface
-	documentStore interfaces.DocumentStoreInterface
-	throttler     interfaces.ThrottleInterface
+	ConfigMap            interfaces.ConfigMapperInterface
+	filters              []interfaces.DestinationFilter
+	middlewares          []interfaces.DestinationMiddleware
+	SenderMapping        map[string]interfaces.EventSenderInterface
+	store                interfaces.StoreInterface
+	DocumentStoreMapping map[string]interfaces.DocumentStoreInterface
+	throttler            interfaces.ThrottleInterface
 }
 
 // NewCaptin - Create Captin instance with default http senders and time throttler
 func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 	store := stores.NewMemoryStore()
-	documentStore := documentStores.NewNullDocumentStore()
 	senderMapping := map[string]interfaces.EventSenderInterface{
 		"http":       &senders.HTTPEventSender{},
 		"beanstalkd": &senders.BeanstalkdSender{},
@@ -45,8 +44,10 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 		},
 		SenderMapping: senderMapping,
 		store:         store,
-		documentStore: documentStore,
-		throttler:     throttles.NewThrottler(store),
+		DocumentStoreMapping: map[string]interfaces.DocumentStoreInterface{
+			"default": documentStores.NewNullDocumentStore(),
+		},
+		throttler: throttles.NewThrottler(store),
 	}
 	return &c
 }
@@ -57,9 +58,9 @@ func (c *Captin) SetStore(store interfaces.StoreInterface) {
 	c.throttler = throttles.NewThrottler(store)
 }
 
-// SetDocumentStore - Set store where event targets are being stored
-func (c *Captin) SetDocumentStore(documentStore interfaces.DocumentStoreInterface) {
-  c.documentStore = documentStore
+// SetDocumentStoreMapping - Set store where event targets are being stored
+func (c *Captin) SetDocumentStoreMapping(mappings map[string]interfaces.DocumentStoreInterface) {
+	c.DocumentStoreMapping = mappings
 }
 
 // SetThrottler - Set throttle
@@ -103,7 +104,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, []captin_errors.ErrorInte
 
 	// Create dispatcher and dispatch events
 	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, c.SenderMapping)
-	dispatcher.Dispatch(e, c.store, c.throttler, c.documentStore)
+	dispatcher.Dispatch(e, c.store, c.throttler, c.DocumentStoreMapping)
 
 	for _, err := range dispatcher.Errors {
 		switch dispatcherErr := err.(type) {

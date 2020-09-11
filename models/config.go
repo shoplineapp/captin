@@ -22,10 +22,11 @@ type Configuration struct {
 	Name                     string   `json:"name"`
 	AllowLoopback            bool     `json:"allow_loopback"`
 	Sender                   string   `json:"sender"`
-	IncludeDocumentAttrs     []string   `json:"include_document_attrs"`
-	ExcludeDocumentAttrs     []string   `json:"exclude_document_attrs"`
-	IncludePayloadAttrs      []string   `json:"include_payload_attrs"`
-	ExcludePayloadAttrs      []string   `json:"exclude_payload_attrs"`
+	DocumentStore            string   `json:"document_store"`
+	IncludeDocumentAttrs     []string `json:"include_document_attrs"`
+	ExcludeDocumentAttrs     []string `json:"exclude_document_attrs"`
+	IncludePayloadAttrs      []string `json:"include_payload_attrs"`
+	ExcludePayloadAttrs      []string `json:"exclude_payload_attrs"`
 }
 
 func (c Configuration) GetByEnv(key string) (string, string) {

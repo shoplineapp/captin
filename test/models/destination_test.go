@@ -23,3 +23,22 @@ func TestGetCallbackURL(t *testing.T) {
 	subject = Destination{Config: config}
 	assert.Equal(t, subject.GetCallbackURL(), overriden)
 }
+
+func TestDestination_GetDocumentStore(t *testing.T) {
+	var config Configuration
+	var subject Destination
+
+	config = Configuration{Name: "callback_a"}
+	subject = Destination{Config: config}
+	assert.Equal(t, "default", subject.GetDocumentStore())
+
+	config = Configuration{Name: "callback_b", DocumentStore: "store_b"}
+	subject = Destination{Config: config}
+	assert.Equal(t, subject.GetDocumentStore(), "store_b")
+
+	overriden := "store_c"
+	os.Setenv("HOOK_CALLBACK_C_DOCUMENT_STORE", overriden)
+	config = Configuration{Name: "callback_c"}
+	subject = Destination{Config: config}
+	assert.Equal(t, overriden, subject.GetDocumentStore())
+}

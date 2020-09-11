@@ -12,3 +12,14 @@ func (d Destination) GetCallbackURL() string {
 	}
 	return value
 }
+
+func (d Destination) GetDocumentStore() string {
+	_, value := d.Config.GetByEnv("document_store")
+	if len(value) == 0 {
+		if len(d.Config.DocumentStore) == 0 {
+			return "default"
+		}
+		return d.Config.DocumentStore
+	}
+	return value
+}

@@ -38,3 +38,9 @@ func TestGetThrottle(t *testing.T) {
 	subject.Throttle = "50s"
 	assert.Equal(t, subject.GetThrottleValue(), time.Duration(50)*time.Second)
 }
+
+func TestConfiguration_GetDocumentStore(t *testing.T) {
+	subject := Configuration{}
+	subject.DocumentStore = "another"
+	assert.Equal(t, subject.DocumentStore, "another")
+}

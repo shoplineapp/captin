@@ -17,6 +17,12 @@ type EventSenderMock struct {
 	mock.Mock
 }
 
+// DocumentStoreMock - Mock DocumentStoreInterface
+type DocumentStoreMock struct {
+	interfaces.DocumentStoreInterface
+	mock.Mock
+}
+
 func TestNewCaptin(t *testing.T) {
 	// When initilizing captin
 	// It has a default http sender
@@ -46,4 +52,14 @@ func TestSetSenderMapping(t *testing.T) {
 	}
 	captin.SetSenderMapping(senderMapping)
 	assert.Equal(t, captin.SenderMapping["mock"], mockSender)
+}
+
+func TestSetDocumentStoreMapping(t *testing.T) {
+	captin := Captin{}
+	mockStore := DocumentStoreMock{}
+	storeMapping := map[string]interfaces.DocumentStoreInterface{
+		"mock": mockStore,
+	}
+	captin.SetDocumentStoreMapping(storeMapping)
+	assert.Equal(t, captin.DocumentStoreMapping["mock"], mockStore)
 }
