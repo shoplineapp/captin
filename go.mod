@@ -3,6 +3,7 @@ module github.com/shoplineapp/captin
 go 1.12
 
 require (
+	github.com/aws/aws-sdk-go v1.34.34
 	github.com/beanstalkd/go-beanstalk v0.0.0-20190515041346-390b03b3064a
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
