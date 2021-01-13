@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	destination_filters "github.com/shoplineapp/captin/destinations/filters"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
@@ -118,6 +119,8 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, []captin_errors.ErrorInte
 			cLogger.WithFields(log.Fields{"error": e}).Error("Unhandled error on dispatcher")
 		}
 	}
+
+	cLogger.Debug(fmt.Sprintf("Captin event executed, %d destinations, %d failed", len(destinations), len(dispatcher.Errors)))
 
 	return true, dispatcher.Errors
 }

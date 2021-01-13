@@ -45,24 +45,37 @@ func (d *Dispatcher) Dispatch(
 	throttler interfaces.ThrottleInterface,
 	documentStoreMappings map[string]interfaces.DocumentStoreInterface,
 ) captin_errors.ErrorInterface {
+	responses := make(chan int, len(d.destinations))
 	for _, destination := range d.destinations {
 		canTrigger, timeRemain, err := throttler.CanTrigger(getEventKey(store, e, destination), destination.Config.GetThrottleValue())
 		documentStore := d.getDocumentStore(destination, documentStoreMappings)
 
 		if err != nil {
-			dLogger.WithFields(log.Fields{"event": e, "destination": destination}).Error("Failed to dispatch event")
-			d.Errors = append(d.Errors, err)
+			dLogger.WithFields(log.Fields{"event": e, "destination": destination, "error": err}).Error("Error on getting throttle key")
 
 			// Send without throttling
-			go d.sendEvent(e, destination, documentStore)
+			go func(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
+				d.sendEvent(e, destination, documentStore)
+				responses <- 1
+			}(e, destination, documentStore)
 			continue
 		}
 
 		if canTrigger {
-			go d.sendEvent(e, destination, documentStore)
+			go func(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
+				d.sendEvent(e, destination, documentStore)
+				responses <- 1
+			}(e, destination, documentStore)
 		} else if !destination.Config.ThrottleTrailingDisabled {
+			responses <- 0
 			d.processDelayedEvent(e, timeRemain, destination, store, documentStore)
+		} else {
+			responses <- 0
 		}
+	}
+	// Wait for destination completion
+	for _, _ = range d.destinations {
+		<-responses
 	}
 	return nil
 }
@@ -210,11 +223,20 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		"action": evt.Key,
 		"target": map[string]string{
 			"type": evt.TargetType,
-			"id": evt.TargetId,
+			"id":   evt.TargetId,
 		},
-		"callback_url": destination.GetCallbackURL(),
+		"callback_url":   destination.GetCallbackURL(),
 		"document_store": destination.GetDocumentStore(),
 	})
+
+	defer func() {
+		if err := recover(); err != nil {
+			callbackLogger.Info(fmt.Sprintf("Event failed sending to %s [%s]", destination.Config.Name, destination.GetCallbackURL()))
+			d.Errors = append(d.Errors, err.(*captin_errors.DispatcherError))
+		}
+		return
+	}()
+
 	callbackLogger.Debug("Ready to send event")
 
 	customizedEvt := d.customizeEvent(evt, destination, documentStore)
@@ -225,7 +247,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	}
 	sender, senderExists := d.senderMapping[senderKey]
 	if senderExists == false {
-		d.Errors = append(d.Errors, &captin_errors.DispatcherError{
+		panic(&captin_errors.DispatcherError{
 			Msg:         fmt.Sprintf("Sender key %s does not exist", senderKey),
 			Destination: destination,
 			Event:       customizedEvt,
@@ -235,14 +257,15 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 
 	err := sender.SendEvent(customizedEvt, destination)
 	if err != nil {
-		d.Errors = append(d.Errors, &captin_errors.DispatcherError{
+		panic(&captin_errors.DispatcherError{
 			Msg:         err.Error(),
 			Destination: destination,
 			Event:       customizedEvt,
 		})
 		return
 	}
-	callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s", destination.GetCallbackURL()))
+
+	callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", destination.Config.Name, destination.GetCallbackURL()))
 }
 
 func (d *Dispatcher) sendAfterEvent(key string, store interfaces.StoreInterface, dest models.Destination, documentStore interfaces.DocumentStoreInterface) func() {
