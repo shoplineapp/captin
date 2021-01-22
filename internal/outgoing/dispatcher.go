@@ -23,6 +23,8 @@ type Dispatcher struct {
 	senderMapping  map[string]interfaces.EventSenderInterface
 	Errors         []captin_errors.ErrorInterface
 	targetDocument map[string]interface{}
+	filters              []interfaces.DestinationFilter
+	middlewares          []interfaces.DestinationMiddleware
 }
 
 // NewDispatcherWithDestinations - Create Outgoing event dispatcher with destinations
@@ -32,10 +34,21 @@ func NewDispatcherWithDestinations(
 	result := Dispatcher{
 		destinations:  destinations,
 		senderMapping: senderMapping,
+		filters:       []interfaces.DestinationFilter{},
+		middlewares:   []interfaces.DestinationMiddleware{},
 		Errors:        []captin_errors.ErrorInterface{},
 	}
 
 	return &result
+}
+
+// SetFilters - Add filters before dispatch
+func (d *Dispatcher) SetFilters(filters []interfaces.DestinationFilter) {
+	d.filters = filters
+}
+
+func (d *Dispatcher) SetMiddlewares(middlewares []interfaces.DestinationMiddleware) {
+	d.middlewares = middlewares
 }
 
 // Dispatch - Dispatch an event to outgoing webhook
@@ -225,6 +238,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 			"type": evt.TargetType,
 			"id":   evt.TargetId,
 		},
+		"hook_name":    destination.Config.Name,
 		"callback_url":   destination.GetCallbackURL(),
 		"document_store": destination.GetDocumentStore(),
 	})
@@ -237,9 +251,19 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		return
 	}()
 
-	callbackLogger.Debug("Ready to send event")
+	callbackLogger.Debug("Preprocess payload and document")
 
 	customizedEvt := d.customizeEvent(evt, destination, documentStore)
+
+	callbackLogger.Debug("Final sift on dispatcher")
+
+	sifted := Custom{}.Sift(&customizedEvt, []models.Destination{destination}, d.filters, d.middlewares)
+	if len(sifted) == 0 {
+		callbackLogger.Info("Event interrupted by dispatcher filters")
+		return
+	}
+
+	callbackLogger.Debug("Ready to send event")
 
 	senderKey := destination.Config.Sender
 	if senderKey == "" {

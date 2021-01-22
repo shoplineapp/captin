@@ -22,6 +22,8 @@ type Captin struct {
 	ConfigMap            interfaces.ConfigMapperInterface
 	filters              []interfaces.DestinationFilter
 	middlewares          []interfaces.DestinationMiddleware
+	dispatchFilters	     []interfaces.DestinationFilter
+	dispatchMiddlewares  []interfaces.DestinationMiddleware
 	SenderMapping        map[string]interfaces.EventSenderInterface
 	store                interfaces.StoreInterface
 	DocumentStoreMapping map[string]interfaces.DocumentStoreInterface
@@ -74,9 +76,18 @@ func (c *Captin) SetDestinationFilters(filters []interfaces.DestinationFilter) {
 	c.filters = filters
 }
 
+// SetDestinationFilters - Set filters
+func (c *Captin) SetDispatchFilters(filters []interfaces.DestinationFilter) {
+	c.dispatchFilters = filters
+}
+
 // SetDestinationMiddlewares - Set middlewares
 func (c *Captin) SetDestinationMiddlewares(middlewares []interfaces.DestinationMiddleware) {
 	c.middlewares = middlewares
+}
+
+func (c *Captin) SetDispatchMiddlewares(middlewares []interfaces.DestinationMiddleware) {
+	c.dispatchMiddlewares = middlewares
 }
 
 func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSenderInterface) {
@@ -105,6 +116,8 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, []captin_errors.ErrorInte
 
 	// Create dispatcher and dispatch events
 	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, c.SenderMapping)
+	dispatcher.SetFilters(c.dispatchFilters)
+	dispatcher.SetMiddlewares(c.dispatchMiddlewares)
 	dispatcher.Dispatch(e, c.store, c.throttler, c.DocumentStoreMapping)
 
 	for _, err := range dispatcher.Errors {
