@@ -278,7 +278,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 
 	if destination.Config.GetDelayValue() != time.Duration(0) {
 		// Sending message with delay in goroutine, no error will be caught
-		callbackLogger.Info(fmt.Sprintf("Event delayed with %d", destination.Config.Delay))
+		callbackLogger.Info(fmt.Sprintf("Event delayed with %s", destination.Config.Delay))
 		go time.AfterFunc(destination.Config.GetDelayValue(), func() {
 			delayedErr := sender.SendEvent(customizedEvt, destination)
 			if delayedErr != nil {
