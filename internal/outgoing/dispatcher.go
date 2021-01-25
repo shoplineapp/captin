@@ -51,7 +51,7 @@ func (d *Dispatcher) Dispatch(
 		documentStore := d.getDocumentStore(destination, documentStoreMappings)
 
 		if err != nil {
-			dLogger.WithFields(log.Fields{"event": e, "destination": destination, "error": err}).Error("Error on getting throttle key")
+			dLogger.WithFields(log.Fields{"event": e.GetTraceInfo(), "destination": destination, "error": err}).Error("Error on getting throttle key")
 
 			// Send without throttling
 			go func(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
@@ -160,7 +160,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 			// Skip updating event data as stored data has newer timestamp
 			dLogger.WithFields(log.Fields{
 				"storedEvent":  storedEvent,
-				"event":        e,
+				"event":        e.GetTraceInfo(),
 				"eventDataKey": "dataKey",
 			}).Debug("Skipping update on event data")
 			return
@@ -220,11 +220,8 @@ func getEventDataKey(s interfaces.StoreInterface, e models.IncomingEvent, d mode
 
 func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
 	callbackLogger := dLogger.WithFields(log.Fields{
-		"action": evt.Key,
-		"target": map[string]string{
-			"type": evt.TargetType,
-			"id":   evt.TargetId,
-		},
+		"action":         evt.Key,
+		"event":          evt.GetTraceInfo(),
 		"callback_url":   destination.GetCallbackURL(),
 		"document_store": destination.GetDocumentStore(),
 	})
@@ -251,6 +248,21 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 			Msg:         fmt.Sprintf("Sender key %s does not exist", senderKey),
 			Destination: destination,
 			Event:       customizedEvt,
+		})
+		return
+	}
+
+	if destination.Config.GetDelayValue() != time.Duration(0) {
+		// Sending message with delay in goroutine, no error will be caught
+		callbackLogger.Info(fmt.Sprintf("Event delayed with %d", destination.Config.Delay))
+		go time.AfterFunc(destination.Config.GetDelayValue(), func() {
+			delayedErr := sender.SendEvent(customizedEvt, destination)
+			if delayedErr != nil {
+				callbackLogger.WithFields(log.Fields{"error": delayedErr}).Error(fmt.Sprintf("Delayed event failed with error on %s [%s]", destination.Config.Name, destination.GetCallbackURL()))
+				return
+			}
+
+			callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", destination.Config.Name, destination.GetCallbackURL()))
 		})
 		return
 	}

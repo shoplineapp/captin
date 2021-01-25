@@ -11,22 +11,24 @@ import (
 
 // Configuration - Webhook Configuration Model
 type Configuration struct {
-	ConfigID                 string   `json:"id"`
-	CallbackURL              string   `json:"callback_url"`
-	Validate                 string   `json:"validate"`
-	Actions                  []string `json:"actions"`
-	Source                   string   `json:"source"`
-	Throttle                 string   `json:"throttle"`
-	ThrottleTrailingDisabled bool     `json:"throttle_trailing_disabled"`
-	IncludeDocument          bool     `json:"include_document"`
-	Name                     string   `json:"name"`
-	AllowLoopback            bool     `json:"allow_loopback"`
-	Sender                   string   `json:"sender"`
-	DocumentStore            string   `json:"document_store"`
-	IncludeDocumentAttrs     []string `json:"include_document_attrs"`
-	ExcludeDocumentAttrs     []string `json:"exclude_document_attrs"`
-	IncludePayloadAttrs      []string `json:"include_payload_attrs"`
-	ExcludePayloadAttrs      []string `json:"exclude_payload_attrs"`
+	ConfigID                 string            `json:"id"`
+	CallbackURL              string            `json:"callback_url"`
+	Validate                 string            `json:"validate"`
+	Actions                  []string          `json:"actions"`
+	Source                   string            `json:"source"`
+	Throttle                 string            `json:"throttle"`
+	Delay                    string            `json:"delay"`
+	ThrottleTrailingDisabled bool              `json:"throttle_trailing_disabled"`
+	IncludeDocument          bool              `json:"include_document"`
+	Name                     string            `json:"name"`
+	AllowLoopback            bool              `json:"allow_loopback"`
+	Sender                   string            `json:"sender"`
+	DocumentStore            string            `json:"document_store"`
+	IncludeDocumentAttrs     []string          `json:"include_document_attrs"`
+	ExcludeDocumentAttrs     []string          `json:"exclude_document_attrs"`
+	IncludePayloadAttrs      []string          `json:"include_payload_attrs"`
+	ExcludePayloadAttrs      []string          `json:"exclude_payload_attrs"`
+	Extras                   map[string]string `json:"extras"`
 }
 
 func (c Configuration) GetByEnv(key string) (string, string) {
@@ -36,8 +38,18 @@ func (c Configuration) GetByEnv(key string) (string, string) {
 
 // GetThrottleValue - Get Throttle Value in millisecond
 func (c Configuration) GetThrottleValue() time.Duration {
+	return c.GetTimeValueMillis(c.Throttle)
+}
+
+// GetDelayValue - Get delay time in millisecond
+func (c Configuration) GetDelayValue() time.Duration {
+	return c.GetTimeValueMillis(c.Delay)
+}
+
+// GetTimeValueMillis - Get millisecond from time value string
+func (c Configuration) GetTimeValueMillis(timeValue string) time.Duration {
 	match := regexp.MustCompile("(\\d+(?:\\.\\d+)?)(s|ms)")
-	res := match.FindAllStringSubmatch(c.Throttle, -1)
+	res := match.FindAllStringSubmatch(timeValue, -1)
 
 	for i := range res {
 		value, err := strconv.Atoi(res[i][1])
