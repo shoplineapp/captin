@@ -21,4 +21,7 @@ type StoreInterface interface {
 	Remove(key string) (bool, error)
 
 	DataKey(e models.IncomingEvent, dest models.Destination, prefix string, suffix string) string
+
+	Enqueue(key string, value string, ttl time.Duration) (bool, error)
+	GetQueue(key string) ([]string, bool, time.Duration, error)
 }

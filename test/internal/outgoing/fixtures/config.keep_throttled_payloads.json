@@ -1,0 +1,14 @@
+[
+  {
+    "id": "1",
+    "throttle": "500ms",
+    "keep_throttled_payloads": true,
+    "actions": [
+      "product.update"
+    ],
+    "source": "core-api",
+    "name": "service_one",
+    "include_document": false,
+    "sender": "mock"
+  }
+]

@@ -13,7 +13,7 @@ import (
 var mLogger = log.WithFields(log.Fields{"class": "MemoryStore"})
 
 type item struct {
-	value      string
+	value      interface{}
 	createDate time.Time
 	ttl        time.Duration
 }
@@ -54,7 +54,7 @@ func (ms *MemoryStore) Get(key string) (string, bool, time.Duration, error) {
 
 	mLogger.WithFields(log.Fields{"key": key}).Debug("Get key")
 	if it, ok := ms.m[key]; ok {
-		return it.value, true, time.Since(it.createDate), nil
+		return it.value.(string), true, time.Since(it.createDate), nil
 	}
 	return "", false, 0, nil
 }
@@ -93,6 +93,35 @@ func (ms *MemoryStore) Remove(key string) (bool, error) {
 	delete(ms.m, key)
 	ms.lock.Unlock()
 	return true, nil
+}
+
+// Enqueue - ttl: optional params for setting the ttl of queue when first element is enqueued
+func (ms *MemoryStore) Enqueue(key string, value string, ttl time.Duration) (bool, error) {
+	ms.lock.Lock()
+	_, ok := ms.m[key]
+	if !ok {
+		ms.m[key] = &item{
+			value: []string{},
+			createDate: time.Now(),
+			ttl: ttl,
+		}
+	}
+	it := ms.m[key]
+
+	it.value = append(it.value.([]string), value)
+	ms.lock.Unlock()
+	return true, nil
+}
+
+func (ms *MemoryStore) GetQueue(key string) ([]string, bool, time.Duration, error) {
+	ms.lock.Lock()
+	defer ms.lock.Unlock()
+
+	mLogger.WithFields(log.Fields{"key": key}).Debug("Get key")
+	if it, ok := ms.m[key]; ok {
+		return it.value.([]string), true, time.Since(it.createDate), nil
+	}
+	return []string{}, false, 0, nil
 }
 
 // Len - Get memory size
