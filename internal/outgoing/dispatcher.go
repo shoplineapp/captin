@@ -212,6 +212,11 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		if jsonErr != nil {
 			panic(jsonErr)
 		}
+		dLogger.WithFields(log.Fields{
+			"queueKey":  queueKey,
+			"event":        e.GetTraceInfo(),
+			"enqueuePayload": jsonString,
+		}).Debug("Storing throttled payload")
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
 	}
 
@@ -222,6 +227,11 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		if jsonErr != nil {
 			panic(jsonErr)
 		}
+		dLogger.WithFields(log.Fields{
+			"queueKey":  queueKey,
+			"event":        e.GetTraceInfo(),
+			"enqueueDocument": jsonString,
+		}).Debug("Storing throttled document")
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
 	}
 
