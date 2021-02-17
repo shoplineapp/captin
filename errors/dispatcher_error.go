@@ -2,12 +2,14 @@ package errors
 
 import (
 	"fmt"
+	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
 )
 
 // DispatcherError - Error when send events
 type DispatcherError struct {
-	ErrorInterface
+	interfaces.ErrorInterface
+
 	Msg         string
 	Event       models.IncomingEvent
 	Destination models.Destination

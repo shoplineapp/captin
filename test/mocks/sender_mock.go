@@ -13,7 +13,9 @@ type SenderMock struct {
 }
 
 // SendEvent - Send an event
-func (s *SenderMock) SendEvent(e models.IncomingEvent, d models.Destination) error {
+func (s *SenderMock) SendEvent(ie interfaces.IncomingEventInterface, id interfaces.DestinationInterface) error {
+	e := ie.(models.IncomingEvent)
+	d := id.(models.Destination)
 	args := s.Called(e, d)
 	return args.Error(0)
 }

@@ -101,6 +101,8 @@ func (ms *MemoryStore) Len() int {
 }
 
 // DataKey - Generate DataKey with events and destination
-func (ms *MemoryStore) DataKey(e models.IncomingEvent, dest models.Destination, prefix string, suffix string) string {
-	return fmt.Sprintf("%s%s.%s.%s%s", prefix, e.Key, dest.Config.Name, e.TargetId, suffix)
+func (ms *MemoryStore) DataKey(ev interfaces.IncomingEventInterface, dest interfaces.DestinationInterface, prefix string, suffix string) string {
+	e := ev.(models.IncomingEvent)
+	config := dest.(models.Destination).Config
+	return fmt.Sprintf("%s%s.%s.%s%s", prefix, e.Key, config.GetName(), e.TargetId, suffix)
 }

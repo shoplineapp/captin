@@ -7,10 +7,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/shoplineapp/captin/interfaces"
 )
 
 // Configuration - Webhook Configuration Model
 type Configuration struct {
+	interfaces.ConfigurationInterface
+
 	ConfigID                 string            `json:"id"`
 	CallbackURL              string            `json:"callback_url"`
 	Validate                 string            `json:"validate"`
@@ -71,4 +74,76 @@ func (c Configuration) GetTimeValueMillis(timeValue string) time.Duration {
 	}
 
 	return 0
+}
+
+func (c Configuration) GetActions() []string {
+	return c.Actions
+}
+
+func (c Configuration) GetConfigID() string {
+	return c.ConfigID
+}
+
+func (c Configuration) GetCallbackURL() string {
+	return c.CallbackURL
+}
+
+func (c Configuration) GetValidate() string {
+	return c.Validate
+}
+
+func (c Configuration) GetSource() string {
+	return c.Source
+}
+
+func (c Configuration) GetThrottle() string {
+	return c.Throttle
+}
+
+func (c Configuration) GetDelay() string {
+	return c.Delay
+}
+
+func (c Configuration) GetThrottleTrailingDisabled() bool {
+	return c.ThrottleTrailingDisabled
+}
+
+func (c Configuration) GetIncludeDocument() bool {
+	return c.IncludeDocument
+}
+
+func (c Configuration) GetName() string {
+	return c.Name
+}
+
+func (c Configuration) GetAllowLoopback() bool {
+	return c.AllowLoopback
+}
+
+func (c Configuration) GetSender() string {
+	return c.Sender
+}
+
+func (c Configuration) GetDocumentStore() string {
+	return c.DocumentStore
+}
+
+func (c Configuration) GetIncludeDocumentAttrs() []string {
+	return c.IncludeDocumentAttrs
+}
+
+func (c Configuration) GetExcludeDocumentAttrs() []string {
+	return c.ExcludeDocumentAttrs
+}
+
+func (c Configuration) GetIncludePayloadAttrs() []string {
+	return c.IncludePayloadAttrs
+}
+
+func (c Configuration) GetExcludePayloadAttrs() []string {
+	return c.ExcludePayloadAttrs
+}
+
+func (c Configuration) GetExtras() map[string]string {
+	return c.Extras
 }

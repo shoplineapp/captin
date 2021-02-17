@@ -2,19 +2,16 @@ package interfaces
 
 import (
 	"time"
-
-	captin_errors "github.com/shoplineapp/captin/errors"
-	models "github.com/shoplineapp/captin/models"
 )
 
 // CaptinInterface - Captin Interface
 type CaptinInterface interface {
-	Execute(e models.IncomingEvent) (bool, []captin_errors.ErrorInterface)
+	Execute(e IncomingEventInterface) (bool, []ErrorInterface)
 }
 
 // EventSenderInterface - Event Sender Interface
 type EventSenderInterface interface {
-	SendEvent(e models.IncomingEvent, d models.Destination) error
+	SendEvent(e IncomingEventInterface, d DestinationInterface) error
 }
 
 // ThrottleInterface - interface for a throttle object
@@ -26,4 +23,8 @@ type EventSenderInterface interface {
 type ThrottleInterface interface {
 	// CanTrigger - Check if can trigger
 	CanTrigger(id string, period time.Duration) (bool, time.Duration, error)
+}
+
+type ErrorHandlerInterface interface {
+	Exec(e ErrorInterface)
 }

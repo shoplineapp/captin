@@ -27,7 +27,10 @@ type HTTPEventSender struct {
 }
 
 // SendEvent - #HttpEventSender SendEvent
-func (c *HTTPEventSender) SendEvent(e models.IncomingEvent, d models.Destination) error {
+func (c *HTTPEventSender) SendEvent(ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) error {
+	e := ev.(models.IncomingEvent)
+	d := dv.(models.Destination)
+
 	url := d.GetCallbackURL()
 	payload, err := json.Marshal(e)
 

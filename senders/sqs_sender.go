@@ -34,7 +34,10 @@ func NewSqsSender(awsConfig aws.Config) *SqsSender {
 }
 
 // SendEvent - Send incoming event into SQS queue
-func (s *SqsSender) SendEvent(e models.IncomingEvent, d models.Destination) error {
+func (s *SqsSender) SendEvent(ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) error {
+	e := ev.(models.IncomingEvent)
+	d := dv.(models.Destination)
+
 	queueURL := d.GetCallbackURL()
 	sLogger.WithFields(log.Fields{"queueURL": queueURL}).Debug("Send sqs event")
 

@@ -2,7 +2,6 @@ package document_stores
 
 import (
   interfaces "github.com/shoplineapp/captin/interfaces"
-  "github.com/shoplineapp/captin/models"
 )
 
 // NullDocumentStore - Null data store
@@ -16,6 +15,7 @@ func NewNullDocumentStore() *NullDocumentStore {
 }
 
 // Get - Get value from store, return with remaining time
-func (ms NullDocumentStore) GetDocument(e models.IncomingEvent) (map[string]interface{}) {
+func (ms NullDocumentStore) GetDocument(e interfaces.IncomingEventInterface) (map[string]interface{}) {
   return map[string]interface{}{}
 }
+

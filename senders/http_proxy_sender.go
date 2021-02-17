@@ -31,7 +31,10 @@ type HTTPProxyEventSender struct {
 }
 
 // SendEvent - #HTTPProxyEventSender SendEvent
-func (c *HTTPProxyEventSender) SendEvent(e models.IncomingEvent, d models.Destination) error {
+func (c *HTTPProxyEventSender) SendEvent(ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) error {
+	e := ev.(models.IncomingEvent)
+	d := dv.(models.Destination)
+
 	url := d.GetCallbackURL()
 	payload, err := json.Marshal(e.Payload)
 

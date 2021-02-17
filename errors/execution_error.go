@@ -2,11 +2,13 @@ package errors
 
 import (
 	"fmt"
+	interfaces "github.com/shoplineapp/captin/interfaces"
 )
 
 // ExecutionError - Error on executing events
 type ExecutionError struct {
-	ErrorInterface
+	interfaces.ErrorInterface
+
 	Cause string
 }
 

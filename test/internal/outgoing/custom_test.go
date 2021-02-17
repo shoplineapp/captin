@@ -3,7 +3,7 @@ package outgoing_test
 import (
 	"testing"
 
-	interfaces "github.com/shoplineapp/captin/interfaces"
+	destination_filters "github.com/shoplineapp/captin/destinations/filters"
 	. "github.com/shoplineapp/captin/internal/outgoing"
 	models "github.com/shoplineapp/captin/models"
 	"github.com/stretchr/testify/assert"
@@ -43,10 +43,10 @@ func TestCustom_Sift(t *testing.T) {
 	middleware := new(MiddlewareMock)
 	middleware.On("Apply", mock.Anything, mock.Anything)
 	destinations := []models.Destination{
-		{Config: models.Configuration{Source: "service_1"}},
-		{Config: models.Configuration{Source: "service_2"}},
+		models.Destination{Config: models.Configuration{Source: "service_1"}},
+		models.Destination{Config: models.Configuration{Source: "service_2"}},
 	}
-	sifted := Custom{}.Sift(&event, destinations, []interfaces.DestinationFilter{filter}, []interfaces.DestinationMiddleware{middleware})
+	sifted := Custom{}.Sift(&event, destinations, []destination_filters.DestinationFilterInterface{filter}, []destination_filters.DestinationMiddlewareInterface{middleware})
 	filter.AssertNumberOfCalls(t, "Applicable", 2)
 	filter.AssertNumberOfCalls(t, "Run", 2)
 	middleware.AssertNumberOfCalls(t, "Apply", 1)
@@ -59,10 +59,10 @@ func TestCustom_Sift(t *testing.T) {
 	middleware = new(MiddlewareMock)
 	middleware.On("Apply", mock.Anything, mock.Anything)
 	destinations = []models.Destination{
-		{Config: models.Configuration{Source: "service_1"}},
-		{Config: models.Configuration{Source: "service_2"}},
+		models.Destination{Config: models.Configuration{Source: "service_1"}},
+		models.Destination{Config: models.Configuration{Source: "service_2"}},
 	}
-	sifted = Custom{}.Sift(&event, destinations, []interfaces.DestinationFilter{filter}, []interfaces.DestinationMiddleware{middleware})
+	sifted = Custom{}.Sift(&event, destinations, []destination_filters.DestinationFilterInterface{filter}, []destination_filters.DestinationMiddlewareInterface{middleware})
 	filter.AssertNumberOfCalls(t, "Applicable", 2)
 	filter.AssertNumberOfCalls(t, "Run", 0)
 	middleware.AssertNumberOfCalls(t, "Apply", 1)
@@ -75,9 +75,9 @@ func TestCustom_Sift(t *testing.T) {
 	middleware = new(MiddlewareMock)
 	middleware.On("Apply", mock.Anything, mock.Anything)
 	destinations = []models.Destination{
-		{Config: models.Configuration{Source: "service_1"}},
+		models.Destination{Config: models.Configuration{Source: "service_1"}},
 	}
-	sifted = Custom{}.Sift(&event, destinations, []interfaces.DestinationFilter{filter}, []interfaces.DestinationMiddleware{middleware})
+	sifted = Custom{}.Sift(&event, destinations, []destination_filters.DestinationFilterInterface{filter}, []destination_filters.DestinationMiddlewareInterface{middleware})
 	filter.AssertNumberOfCalls(t, "Applicable", 1)
 	filter.AssertNumberOfCalls(t, "Run", 1)
 	middleware.AssertNumberOfCalls(t, "Apply", 1)

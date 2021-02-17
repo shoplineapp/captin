@@ -1,7 +1,6 @@
 package destination_filters
 
 import (
-	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
@@ -9,7 +8,7 @@ import (
 var eLogger = log.WithFields(log.Fields{"class": "EnvironmentFilter"})
 
 type EnvironmentFilter struct {
-	interfaces.DestinationFilter
+	DestinationFilterInterface
 }
 
 // Destination needs to be enabled by ENV Variable {Config Name}_ENABLED, e.g, WAPOS_SYNC_ENABLED
