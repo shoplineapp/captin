@@ -38,6 +38,8 @@ type ConfigurationInterface interface {
 	GetThrottle() string
 	GetDelay() string
 	GetThrottleTrailingDisabled() bool
+	GetKeepThrottledPayloads() bool
+	GetKeepThrottledDocuments() bool
 	GetIncludeDocument() bool
 	GetName() string
 	GetAllowLoopback() bool

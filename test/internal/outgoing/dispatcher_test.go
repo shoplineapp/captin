@@ -7,11 +7,14 @@ import (
 	"reflect"
 	"testing"
 	"time"
+	"fmt"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
+	stores "github.com/shoplineapp/captin/internal/stores"
 	models "github.com/shoplineapp/captin/models"
 	mocks "github.com/shoplineapp/captin/test/mocks"
 
@@ -191,6 +194,193 @@ func TestDispatchEvents_Throttled_UpdatePayload(t *testing.T) {
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
 	store.AssertCalled(t, "Get", throttleID)
 	store.AssertCalled(t, "Update", throttleID, `{"IncomingEventInterface":null,"TraceId":"","event_key":"product.update","source":"core","payload":{"field1":2},"control":null,"target_type":"Product","target_id":"product_id"}`)
+}
+
+func TestDispatchEvents_Throttled_KeepThrottledPayloads(t *testing.T) {
+	_, documentStores, sender, dispatcher, throttler := setup("fixtures/config.keep_throttled_payloads.json")
+	store := stores.NewMemoryStore()
+
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
+
+	throttleID := "product.update.service_one.product_id-data"
+	throttlePayloadsID := "product.update.service_one.product_id-throttled_payloads"
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 1},
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStores)
+
+	throttledPayloads, _, _, _ := store.GetQueue(throttlePayloadsID)
+	assert.Equal(t, len(throttledPayloads), 1)
+
+	sender.AssertNumberOfCalls(t, "SendEvent", 0)
+
+	time.Sleep(600 * time.Millisecond)
+
+	sender.AssertCalled(t, "SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+		return fmt.Sprint(e.ThrottledPayloads) == fmt.Sprint([]map[string]interface{}{
+			{"field1": 1},
+		})
+	}), mock.Anything)
+
+	// it should clean up after sendEvent
+	_, storedEventExists, _, _ := store.Get(throttleID)
+	throttledPayloads, _, _, _ = store.GetQueue(throttlePayloadsID)
+	assert.Equal(t, false, storedEventExists)
+	assert.Equal(t, 0, len(throttledPayloads))
+}
+
+func TestDispatchEvents_Throttled_KeepThrottledPayloads_Multiple(t *testing.T) {
+	_, documentStores, sender, dispatcher, throttler := setup("fixtures/config.keep_throttled_payloads.json")
+	store := stores.NewMemoryStore()
+
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
+
+	throttleID := "product.update.service_one.product_id-data"
+	throttlePayloadsID := "product.update.service_one.product_id-throttled_payloads"
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 1},
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStores)
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 2},
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStores)
+
+	throttledPayloads, _, _, _ := store.GetQueue(throttlePayloadsID)
+	assert.Equal(t, 2, len(throttledPayloads))
+
+	sender.AssertNumberOfCalls(t, "SendEvent", 0)
+
+	time.Sleep(600 * time.Millisecond)
+
+	// it should SendEvent with 2 throttled payloads
+	sender.AssertCalled(t, "SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+		return fmt.Sprint(e.ThrottledPayloads) == fmt.Sprint([]map[string]interface{}{
+			{"field1": 1},
+			{"field1": 2},
+		})
+	}), mock.Anything)
+
+	// it should SendEvent with last payload
+	sender.AssertCalled(t, "SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+		return fmt.Sprint(e.Payload) == fmt.Sprint(map[string]interface{}{"field1": 2})
+	}), mock.Anything)
+
+	// it should clean up after sendEvent
+	_, storedEventExists, _, _ := store.Get(throttleID)
+	throttledPayloads, _, _, _ = store.GetQueue(throttlePayloadsID)
+	assert.Equal(t, false, storedEventExists)
+	assert.Equal(t, 0, len(throttledPayloads))
+}
+
+func TestDispatchEvents_Throttled_KeepThrottledDocuments(t *testing.T) {
+	_, documentStores, sender, dispatcher, throttler := setup("fixtures/config.keep_throttled_documents.json")
+	store := stores.NewMemoryStore()
+
+	mockDocumentStore := new(mocks.DocumentStoreMock)
+	documentStores["default"] = mockDocumentStore
+	mockDocumentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{"foo": "bar"})
+
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
+
+	throttleID := "product.update.service_one.product_id-data"
+	throttleDocumentsID := "product.update.service_one.product_id-throttled_documents"
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStores)
+
+	throttledDocuments, _, _, _ := store.GetQueue(throttleDocumentsID)
+	assert.Equal(t, 1, len(throttledDocuments))
+
+	sender.AssertNumberOfCalls(t, "SendEvent", 0)
+
+	time.Sleep(600 * time.Millisecond)
+
+	sender.AssertCalled(t, "SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+		return fmt.Sprint(e.ThrottledDocuments) == fmt.Sprint([]map[string]interface{}{
+			{"foo": "bar"},
+		})
+	}), mock.Anything)
+
+	// it should clean up after sendEvent
+	_, storedEventExists, _, _ := store.Get(throttleID)
+	throttledDocuments, _, _, _ = store.GetQueue(throttleDocumentsID)
+	assert.Equal(t, false, storedEventExists)
+	assert.Equal(t, 0, len(throttledDocuments))
+}
+
+func TestDispatchEvents_Throttled_KeepThrottledDocuments_Multiple(t *testing.T) {
+	_, documentStores, sender, dispatcher, throttler := setup("fixtures/config.keep_throttled_documents.json")
+	store := stores.NewMemoryStore()
+
+	mockDocumentStore := new(mocks.DocumentStoreMock)
+	documentStores["default"] = mockDocumentStore
+	mockDocumentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{"foo": "bar1"}).Once()
+	mockDocumentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{"foo": "bar2"})
+
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
+
+	throttleID := "product.update.service_one.product_id-data"
+	throttleDocumentsID := "product.update.service_one.product_id-throttled_documents"
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStores)
+
+	// clear cache in dispatcher.targetDocument private field
+	// src: https://gist.github.com/CyberLight/1da35b4e0093bc12302f
+	ptrToTargetDocument := (*interface{})(unsafe.Pointer(reflect.Indirect(reflect.ValueOf(dispatcher)).FieldByName("targetDocument").UnsafeAddr()))
+	*ptrToTargetDocument = nil
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStores)
+
+	throttledDocuments, _, _, _ := store.GetQueue(throttleDocumentsID)
+	assert.Equal(t, 2, len(throttledDocuments))
+
+	sender.AssertNumberOfCalls(t, "SendEvent", 0)
+
+	time.Sleep(600 * time.Millisecond)
+
+	sender.AssertCalled(t, "SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+		return fmt.Sprint(e.ThrottledDocuments) == fmt.Sprint([]map[string]interface{}{
+			{"foo": "bar1"},
+			{"foo": "bar2"},
+		})
+	}), mock.Anything)
+
+	// it should clean up after sendEvent
+	_, storedEventExists, _, _ := store.Get(throttleID)
+	throttledDocuments, _, _, _ = store.GetQueue(throttleDocumentsID)
+	assert.Equal(t, false, storedEventExists)
+	assert.Equal(t, 0, len(throttledDocuments))
 }
 
 func TestDispatchEvents_With_Document(t *testing.T) {

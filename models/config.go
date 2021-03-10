@@ -22,6 +22,8 @@ type Configuration struct {
 	Throttle                 string            `json:"throttle"`
 	Delay                    string            `json:"delay"`
 	ThrottleTrailingDisabled bool              `json:"throttle_trailing_disabled"`
+	KeepThrottledPayloads    bool              `json:"keep_throttled_payloads"`
+	KeepThrottledDocuments   bool              `json:"keep_throttled_documents"`
 	IncludeDocument          bool              `json:"include_document"`
 	Name                     string            `json:"name"`
 	AllowLoopback            bool              `json:"allow_loopback"`
@@ -106,6 +108,14 @@ func (c Configuration) GetDelay() string {
 
 func (c Configuration) GetThrottleTrailingDisabled() bool {
 	return c.ThrottleTrailingDisabled
+}
+
+func (c Configuration) GetKeepThrottledPayloads() bool {
+	return c.KeepThrottledPayloads
+}
+
+func (c Configuration) GetKeepThrottledDocuments() bool {
+	return c.KeepThrottledDocuments
 }
 
 func (c Configuration) GetIncludeDocument() bool {

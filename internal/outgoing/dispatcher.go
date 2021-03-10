@@ -76,7 +76,7 @@ func (d *Dispatcher) Dispatch(
 
 			// Send without throttling
 			go func(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
-				d.sendEvent(e, destination, documentStore)
+				d.sendEvent(e, destination, store, documentStore)
 				responses <- 1
 			}(e, destination, documentStore)
 			continue
@@ -84,7 +84,7 @@ func (d *Dispatcher) Dispatch(
 
 		if canTrigger {
 			go func(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
-				d.sendEvent(e, destination, documentStore)
+				d.sendEvent(e, destination, store, documentStore)
 				responses <- 1
 			}(e, destination, documentStore)
 		} else if !config.GetThrottleTrailingDisabled() {
@@ -119,15 +119,46 @@ func (d Dispatcher) getDocumentStore(dest models.Destination, documentStoreMappi
 // inject document and sanitize fields in event based on destination
 func (d *Dispatcher) customizeEvent(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) interfaces.IncomingEventInterface {
 	customized := e
-	d.customizeDocument(&customized, destination, documentStore)
-	d.customizePayload(&customized, destination)
+
+	customized.TargetDocument = d.customizeDocument(&customized, destination, documentStore)
+	customized.Payload = d.customizePayload(customized, destination)
 	return customized
 }
 
-func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
+// inject throttled payloads from store if keep_throttled_payloads is true
+func (d *Dispatcher) injectThrottledPayloads(e models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface) interfaces.IncomingEventInterface {
+	if destination.Config.GetKeepThrottledPayloads() {
+		queueKey := getEventThrottledPayloadsKey(store, e, destination)
+		payloadStrings, _, _, _ := store.GetQueue(queueKey)
+		store.Remove(queueKey)
+		for _, payloadStr := range payloadStrings {
+			payload := map[string]interface{}{}
+			json.Unmarshal([]byte(payloadStr), &payload)
+			e.ThrottledPayloads = append(e.ThrottledPayloads, payload)
+		}
+	}
+	return e
+}
+
+// inject throttled documents from store if include_document and keep_throttled_documents is true
+func (d *Dispatcher) injectThrottledDocuments(e models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface) interfaces.IncomingEventInterface {
+	if destination.Config.GetIncludeDocument() && destination.Config.GetKeepThrottledDocuments() {
+		queueKey := getEventThrottledDocumentsKey(store, e, destination)
+		documentStrings, _, _, _ := store.GetQueue(queueKey)
+		store.Remove(queueKey)
+		for _, documentStr := range documentStrings {
+			document := map[string]interface{}{}
+			json.Unmarshal([]byte(documentStr), &document)
+			e.ThrottledDocuments = append(e.ThrottledDocuments, document)
+		}
+	}
+	return e
+}
+
+func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) map[string]interface{} {
 	config := destination.Config
 	if config.GetIncludeDocument() == false {
-		return
+		return e.TargetDocument
 	}
 
 	// memoize document to be used across events for diff. destinations
@@ -136,25 +167,23 @@ func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination mode
 	}
 
 	if len(config.GetIncludeDocumentAttrs()) >= 1 {
-		e.TargetDocument = helpers.IncludeFields(d.targetDocument, config.GetIncludeDocumentAttrs()).(map[string]interface{})
+		return helpers.IncludeFields(d.targetDocument, config.GetIncludeDocumentAttrs()).(map[string]interface{})
 	} else if len(config.GetExcludeDocumentAttrs()) >= 1 {
-		e.TargetDocument = helpers.ExcludeFields(d.targetDocument, config.GetExcludeDocumentAttrs()).(map[string]interface{})
+		return helpers.ExcludeFields(d.targetDocument, config.GetExcludeDocumentAttrs()).(map[string]interface{})
 	} else {
-		e.TargetDocument = d.targetDocument
+		return d.targetDocument
 	}
-
-	return
 }
 
-func (d *Dispatcher) customizePayload(e *models.IncomingEvent, destination interfaces.DestinationInterface) {
+func (d *Dispatcher) customizePayload(e models.IncomingEvent, destination interfaces.DestinationInterface) map[string]interface{}  {
 	config := destination.(models.Destination).Config
 	if len(config.GetIncludePayloadAttrs()) >= 1 {
-		e.Payload = helpers.IncludeFields(e.Payload, config.GetIncludePayloadAttrs()).(map[string]interface{})
+		return helpers.IncludeFields(e.Payload, config.GetIncludePayloadAttrs()).(map[string]interface{})
 	} else if len(config.GetExcludePayloadAttrs()) >= 1 {
-		e.Payload = helpers.ExcludeFields(e.Payload, config.GetExcludePayloadAttrs()).(map[string]interface{})
+		return helpers.ExcludeFields(e.Payload, config.GetExcludePayloadAttrs()).(map[string]interface{})
 	}
 
-	return
+	return e.Payload
 }
 
 func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
@@ -175,23 +204,55 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		panic(storeErr)
 	}
 
+	var storedEvent models.IncomingEvent
+	if dataExists {
+		storedEvent = models.IncomingEvent{}
+		json.Unmarshal([]byte(storedData), &storedEvent)
+	}
+
+	if dataExists && getControlTimestamp(storedEvent, 0) > getControlTimestamp(e, uint64(time.Now().UnixNano())) {
+		// Skip updating event data as stored data has newer timestamp
+		dLogger.WithFields(log.Fields{
+			"storedEvent":  storedEvent,
+			"event":        e.GetTraceInfo(),
+			"eventDataKey": "dataKey",
+		}).Debug("Skipping update on event data")
+		return
+	}
+
+	if dest.Config.GetKeepThrottledPayloads() {
+		customizedPayload := d.customizePayload(e, dest)
+		queueKey := getEventThrottledPayloadsKey(store, e, dest)
+		jsonString, jsonErr := json.Marshal(customizedPayload)
+		if jsonErr != nil {
+			panic(jsonErr)
+		}
+		dLogger.WithFields(log.Fields{
+			"queueKey":  queueKey,
+			"event":        e.GetTraceInfo(),
+			"enqueuePayload": jsonString,
+		}).Debug("Storing throttled payload")
+		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
+	}
+
+	if dest.Config.GetIncludeDocument() && dest.Config.GetKeepThrottledDocuments() {
+		customizedDocument := d.customizeDocument(&e, dest, documentStore)
+		queueKey := getEventThrottledDocumentsKey(store, e, dest)
+		jsonString, jsonErr := json.Marshal(customizedDocument)
+		if jsonErr != nil {
+			panic(jsonErr)
+		}
+		dLogger.WithFields(log.Fields{
+			"queueKey":  queueKey,
+			"event":        e.GetTraceInfo(),
+			"enqueueDocument": jsonString,
+		}).Debug("Storing throttled document")
+		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
+	}
+
 	jsonString, jsonErr := json.Marshal(e)
 	if jsonErr != nil {
 		panic(jsonErr)
-	}
-
-	if dataExists {
-		storedEvent := models.IncomingEvent{}
-		json.Unmarshal([]byte(storedData), &storedEvent)
-		if getControlTimestamp(storedEvent, 0) > getControlTimestamp(e, uint64(time.Now().UnixNano())) {
-			// Skip updating event data as stored data has newer timestamp
-			dLogger.WithFields(log.Fields{
-				"storedEvent":  storedEvent,
-				"event":        e.GetTraceInfo(),
-				"eventDataKey": "dataKey",
-			}).Debug("Skipping update on event data")
-			return
-		}
 	}
 
 	if dataExists {
@@ -246,7 +307,15 @@ func getEventDataKey(s interfaces.StoreInterface, e interfaces.IncomingEventInte
 	return s.DataKey(e, d, "", "-data")
 }
 
-func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
+func getEventThrottledPayloadsKey(s interfaces.StoreInterface, e models.IncomingEvent, d models.Destination) string {
+	return s.DataKey(e, d, "", "-throttled_payloads")
+}
+
+func getEventThrottledDocumentsKey(s interfaces.StoreInterface, e models.IncomingEvent, d models.Destination) string {
+	return s.DataKey(e, d, "", "-throttled_documents")
+}
+
+func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
 	config := destination.Config
 	callbackLogger := dLogger.WithFields(log.Fields{
 		"action":         evt.Key,
@@ -266,11 +335,15 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 
 	callbackLogger.Debug("Preprocess payload and document")
 
-	customizedEvt := d.customizeEvent(evt, destination, documentStore).(models.IncomingEvent)
+	evt = d.customizeEvent(evt, destination, documentStore).(models.IncomingEvent)
+
+	evt = d.injectThrottledPayloads(evt, destination, store).(models.IncomingEvent)
+
+	evt = d.injectThrottledDocuments(evt, destination, store).(models.IncomingEvent)
 
 	callbackLogger.Debug("Final sift on dispatcher")
 
-	sifted := Custom{}.Sift(&customizedEvt, []models.Destination{destination}, d.filters, d.middlewares)
+	sifted := Custom{}.Sift(&evt, []models.Destination{destination}, d.filters, d.middlewares)
 	if len(sifted) == 0 {
 		callbackLogger.Info("Event interrupted by dispatcher filters")
 		return
@@ -287,7 +360,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		panic(&captin_errors.DispatcherError{
 			Msg:         fmt.Sprintf("Sender key %s does not exist", senderKey),
 			Destination: destination,
-			Event:       customizedEvt,
+			Event:       evt,
 		})
 		return
 	}
@@ -296,13 +369,13 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		// Sending message with delay in goroutine, no error will be caught
 		callbackLogger.Info(fmt.Sprintf("Event delayed with %s", config.GetDelay()))
 		go time.AfterFunc(config.GetDelayValue(), func() {
-			delayedErr := sender.SendEvent(customizedEvt, destination)
+			delayedErr := sender.SendEvent(evt, destination)
 			if delayedErr != nil {
 				callbackLogger.WithFields(log.Fields{"error": delayedErr}).Error(fmt.Sprintf("Delayed event failed with error on %s [%s]", config.GetName(), destination.GetCallbackURL()))
 				d.TriggerErrorHandler(&captin_errors.DispatcherError{
 					Msg:         delayedErr.Error(),
 					Destination: destination,
-					Event:       customizedEvt,
+					Event:       evt,
 				})
 				return
 			}
@@ -312,12 +385,12 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		return
 	}
 
-	err := sender.SendEvent(customizedEvt, destination)
+	err := sender.SendEvent(evt, destination)
 	if err != nil {
 		panic(&captin_errors.DispatcherError{
 			Msg:         err.Error(),
 			Destination: destination,
-			Event:       customizedEvt,
+			Event:       evt,
 		})
 		return
 	}
@@ -326,12 +399,12 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 }
 
 func (d *Dispatcher) sendAfterEvent(key string, store interfaces.StoreInterface, dest models.Destination, documentStore interfaces.DocumentStoreInterface) func() {
-	dLogger.WithFields(log.Fields{"key": key}).Debug("After event callback")
-	payload, _, _, _ := store.Get(key)
-	event := models.IncomingEvent{}
-	json.Unmarshal([]byte(payload), &event)
 	return func() {
-		d.sendEvent(event, dest, documentStore)
+		dLogger.WithFields(log.Fields{"key": key}).Debug("After event callback")
+		payload, _, _, _ := store.Get(key)
+		event := models.IncomingEvent{}
+		json.Unmarshal([]byte(payload), &event)
+		d.sendEvent(event, dest, store, documentStore)
 		store.Remove(key)
 	}
 }
