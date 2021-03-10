@@ -19,6 +19,8 @@ type Configuration struct {
 	Throttle                 string            `json:"throttle"`
 	Delay                    string            `json:"delay"`
 	ThrottleTrailingDisabled bool              `json:"throttle_trailing_disabled"`
+	KeepThrottledPayloads    bool              `json:"keep_throttled_payloads"`
+	KeepThrottledDocuments   bool              `json:"keep_throttled_documents"`
 	IncludeDocument          bool              `json:"include_document"`
 	Name                     string            `json:"name"`
 	AllowLoopback            bool              `json:"allow_loopback"`

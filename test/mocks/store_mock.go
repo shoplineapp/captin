@@ -33,6 +33,16 @@ func (s *StoreMock) Update(key string, value string) (bool, error) {
 	return args.Bool(0), args.Error(1)
 }
 
+func (s *StoreMock) Enqueue(key string, value string, ttl time.Duration) (bool, error) {
+	args := s.Called(key, value, ttl)
+	return args.Bool(0), args.Error(1)
+}
+
+func (s *StoreMock) GetQueue(key string) ([]string, bool, time.Duration, error) {
+	args := s.Called(key)
+	return args.Get(0).([]string), args.Bool(1), args.Get(2).(time.Duration), args.Error(3)
+}
+
 // Remove - Remove value for key
 func (s *StoreMock) Remove(key string) (bool, error) {
 	args := s.Called(key)
