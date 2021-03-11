@@ -50,6 +50,8 @@ func (s *StoreMock) Remove(key string) (bool, error) {
 }
 
 // DataKey - Generate DataKey with events and destination (Won't Mock)
-func (s *StoreMock) DataKey(e models.IncomingEvent, dest models.Destination, prefix string, suffix string) string {
-	return fmt.Sprintf("%s%s.%s.%s%s", prefix, e.Key, dest.Config.Name, e.TargetId, suffix)
+func (s *StoreMock) DataKey(ie interfaces.IncomingEventInterface, idest interfaces.DestinationInterface, prefix string, suffix string) string {
+	e := ie.(models.IncomingEvent)
+	dest := idest.(models.Destination)
+	return fmt.Sprintf("%s%s.%s.%s%s", prefix, e.Key, dest.Config.GetName(), e.TargetId, suffix)
 }

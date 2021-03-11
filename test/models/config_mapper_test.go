@@ -8,10 +8,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	. "github.com/shoplineapp/captin/models"
+	interfaces "github.com/shoplineapp/captin/interfaces"
 )
 
-func setup() []Configuration {
-	result := []Configuration{}
+func setup() []interfaces.ConfigurationInterface {
+	result := []interfaces.ConfigurationInterface{}
 	for i := 0; i < 3; i++ {
 		switch i {
 		case 0:
@@ -38,10 +39,10 @@ func setup() []Configuration {
 	return result
 }
 
-func getNames(configs []Configuration) []string {
+func getNames(configs []interfaces.ConfigurationInterface) []string {
 	result := []string{}
 	for _, config := range configs {
-		result = append(result, config.Name)
+		result = append(result, config.GetName())
 	}
 	return result
 }

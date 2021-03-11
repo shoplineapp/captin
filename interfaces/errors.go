@@ -1,4 +1,4 @@
-package errors
+package interfaces
 
 type ErrorInterface interface {
 	Error() string

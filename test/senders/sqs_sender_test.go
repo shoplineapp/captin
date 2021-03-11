@@ -49,7 +49,7 @@ func TestSqsSender_SendEvent_Success(t *testing.T) {
 	result := sender.SendEvent(
 		models.IncomingEvent{},
 		models.Destination{
-			models.Configuration{},
+			Config: models.Configuration{},
 		},
 	)
 
@@ -68,7 +68,7 @@ func TestSqsSender_SendEvent_Failed(t *testing.T) {
 	result := sender.SendEvent(
 		models.IncomingEvent{Control: map[string]interface{}{"result": "failed"}},
 		models.Destination{
-			models.Configuration{Name: "failed"},
+			Config: models.Configuration{Name: "failed"},
 		},
 	)
 

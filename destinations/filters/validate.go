@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/robertkrimen/otto"
-	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
@@ -12,7 +11,7 @@ import (
 var vLogger = log.WithFields(log.Fields{"class": "ValidateFilter"})
 
 type ValidateFilter struct {
-	interfaces.DestinationFilter
+	DestinationFilterInterface
 }
 
 func (f ValidateFilter) Run(e models.IncomingEvent, d models.Destination) (bool, error) {
@@ -41,5 +40,5 @@ func (f ValidateFilter) Run(e models.IncomingEvent, d models.Destination) (bool,
 }
 
 func (f ValidateFilter) Applicable(e models.IncomingEvent, d models.Destination) bool {
-	return (d.Config.Validate) != ""
+	return (d.Config.GetValidate()) != ""
 }

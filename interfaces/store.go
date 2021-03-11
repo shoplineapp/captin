@@ -2,8 +2,6 @@ package interfaces
 
 import (
 	"time"
-
-	models "github.com/shoplineapp/captin/models"
 )
 
 // StoreInterface - Store for throttle events
@@ -20,8 +18,9 @@ type StoreInterface interface {
 	// Remove - Remove value for key
 	Remove(key string) (bool, error)
 
-	DataKey(e models.IncomingEvent, dest models.Destination, prefix string, suffix string) string
+	DataKey(e IncomingEventInterface, dest DestinationInterface, prefix string, suffix string) string
 
 	Enqueue(key string, value string, ttl time.Duration) (bool, error)
+
 	GetQueue(key string) ([]string, bool, time.Duration, error)
 }

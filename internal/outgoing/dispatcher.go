@@ -8,9 +8,10 @@ import (
 
 	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
+	destination_filters "github.com/shoplineapp/captin/destinations/filters"
+	models "github.com/shoplineapp/captin/models"
 	documentStores "github.com/shoplineapp/captin/internal/document_stores"
 	helpers "github.com/shoplineapp/captin/internal/helpers"
-	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,10 +22,11 @@ var nullDocumentStore = documentStores.NewNullDocumentStore()
 type Dispatcher struct {
 	destinations   []models.Destination
 	senderMapping  map[string]interfaces.EventSenderInterface
-	Errors         []captin_errors.ErrorInterface
+	Errors         []interfaces.ErrorInterface
 	targetDocument map[string]interface{}
-	filters        []interfaces.DestinationFilter
-	middlewares    []interfaces.DestinationMiddleware
+	filters        []destination_filters.DestinationFilterInterface
+	middlewares    []destination_filters.DestinationMiddlewareInterface
+	errorHandler   interfaces.ErrorHandlerInterface
 }
 
 // NewDispatcherWithDestinations - Create Outgoing event dispatcher with destinations
@@ -34,33 +36,39 @@ func NewDispatcherWithDestinations(
 	result := Dispatcher{
 		destinations:  destinations,
 		senderMapping: senderMapping,
-		filters:       []interfaces.DestinationFilter{},
-		middlewares:   []interfaces.DestinationMiddleware{},
-		Errors:        []captin_errors.ErrorInterface{},
+		filters:       []destination_filters.DestinationFilterInterface{},
+		middlewares:   []destination_filters.DestinationMiddlewareInterface{},
+		Errors:        []interfaces.ErrorInterface{},
 	}
 
 	return &result
 }
 
 // SetFilters - Add filters before dispatch
-func (d *Dispatcher) SetFilters(filters []interfaces.DestinationFilter) {
+func (d *Dispatcher) SetFilters(filters []destination_filters.DestinationFilterInterface) {
 	d.filters = filters
 }
 
-func (d *Dispatcher) SetMiddlewares(middlewares []interfaces.DestinationMiddleware) {
+func (d *Dispatcher) SetMiddlewares(middlewares []destination_filters.DestinationMiddlewareInterface) {
 	d.middlewares = middlewares
+}
+
+func (d *Dispatcher) SetErrorHandler(handler interfaces.ErrorHandlerInterface) {
+	d.errorHandler = handler
 }
 
 // Dispatch - Dispatch an event to outgoing webhook
 func (d *Dispatcher) Dispatch(
-	e models.IncomingEvent,
+	event interfaces.IncomingEventInterface,
 	store interfaces.StoreInterface,
 	throttler interfaces.ThrottleInterface,
 	documentStoreMappings map[string]interfaces.DocumentStoreInterface,
-) captin_errors.ErrorInterface {
+) interfaces.ErrorInterface {
 	responses := make(chan int, len(d.destinations))
+	e := event.(models.IncomingEvent)
 	for _, destination := range d.destinations {
-		canTrigger, timeRemain, err := throttler.CanTrigger(getEventKey(store, e, destination), destination.Config.GetThrottleValue())
+		config := destination.Config
+		canTrigger, timeRemain, err := throttler.CanTrigger(getEventKey(store, e, destination), config.GetThrottleValue())
 		documentStore := d.getDocumentStore(destination, documentStoreMappings)
 
 		if err != nil {
@@ -79,7 +87,7 @@ func (d *Dispatcher) Dispatch(
 				d.sendEvent(e, destination, store, documentStore)
 				responses <- 1
 			}(e, destination, documentStore)
-		} else if !destination.Config.ThrottleTrailingDisabled {
+		} else if !config.GetThrottleTrailingDisabled() {
 			responses <- 0
 			d.processDelayedEvent(e, timeRemain, destination, store, documentStore)
 		} else {
@@ -93,6 +101,12 @@ func (d *Dispatcher) Dispatch(
 	return nil
 }
 
+func (d Dispatcher) TriggerErrorHandler(err *captin_errors.DispatcherError) {
+	if d.errorHandler != nil {
+		go d.errorHandler.Exec(*err)
+	}
+}
+
 // Private Functions
 
 func (d Dispatcher) getDocumentStore(dest models.Destination, documentStoreMappings map[string]interfaces.DocumentStoreInterface) interfaces.DocumentStoreInterface {
@@ -103,18 +117,17 @@ func (d Dispatcher) getDocumentStore(dest models.Destination, documentStoreMappi
 }
 
 // inject document and sanitize fields in event based on destination
-func (d *Dispatcher) customizeEvent(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) models.IncomingEvent {
+func (d *Dispatcher) customizeEvent(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) interfaces.IncomingEventInterface {
 	customized := e
 
 	customized.TargetDocument = d.customizeDocument(&customized, destination, documentStore)
-	customized.Payload = d.customizePayload(&customized, destination)
-
+	customized.Payload = d.customizePayload(customized, destination)
 	return customized
 }
 
 // inject throttled payloads from store if keep_throttled_payloads is true
-func (d *Dispatcher) injectThrottledPayloads(e models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface) models.IncomingEvent {
-	if destination.Config.KeepThrottledPayloads {
+func (d *Dispatcher) injectThrottledPayloads(e models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface) interfaces.IncomingEventInterface {
+	if destination.Config.GetKeepThrottledPayloads() {
 		queueKey := getEventThrottledPayloadsKey(store, e, destination)
 		payloadStrings, _, _, _ := store.GetQueue(queueKey)
 		store.Remove(queueKey)
@@ -128,8 +141,8 @@ func (d *Dispatcher) injectThrottledPayloads(e models.IncomingEvent, destination
 }
 
 // inject throttled documents from store if include_document and keep_throttled_documents is true
-func (d *Dispatcher) injectThrottledDocuments(e models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface) models.IncomingEvent {
-	if destination.Config.IncludeDocument && destination.Config.KeepThrottledDocuments {
+func (d *Dispatcher) injectThrottledDocuments(e models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface) interfaces.IncomingEventInterface {
+	if destination.Config.GetIncludeDocument() && destination.Config.GetKeepThrottledDocuments() {
 		queueKey := getEventThrottledDocumentsKey(store, e, destination)
 		documentStrings, _, _, _ := store.GetQueue(queueKey)
 		store.Remove(queueKey)
@@ -143,7 +156,8 @@ func (d *Dispatcher) injectThrottledDocuments(e models.IncomingEvent, destinatio
 }
 
 func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) map[string]interface{} {
-	if destination.Config.IncludeDocument == false {
+	config := destination.Config
+	if config.GetIncludeDocument() == false {
 		return e.TargetDocument
 	}
 
@@ -152,20 +166,21 @@ func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination mode
 		d.targetDocument = documentStore.GetDocument(*e)
 	}
 
-	if len(destination.Config.IncludeDocumentAttrs) >= 1 {
-		return helpers.IncludeFields(d.targetDocument, destination.Config.IncludeDocumentAttrs).(map[string]interface{})
-	} else if len(destination.Config.ExcludeDocumentAttrs) >= 1 {
-		return helpers.ExcludeFields(d.targetDocument, destination.Config.ExcludeDocumentAttrs).(map[string]interface{})
+	if len(config.GetIncludeDocumentAttrs()) >= 1 {
+		return helpers.IncludeFields(d.targetDocument, config.GetIncludeDocumentAttrs()).(map[string]interface{})
+	} else if len(config.GetExcludeDocumentAttrs()) >= 1 {
+		return helpers.ExcludeFields(d.targetDocument, config.GetExcludeDocumentAttrs()).(map[string]interface{})
 	} else {
 		return d.targetDocument
 	}
 }
 
-func (d *Dispatcher) customizePayload(e *models.IncomingEvent, destination models.Destination) map[string]interface{} {
-	if len(destination.Config.IncludePayloadAttrs) >= 1 {
-		return helpers.IncludeFields(e.Payload, destination.Config.IncludePayloadAttrs).(map[string]interface{})
-	} else if len(destination.Config.ExcludePayloadAttrs) >= 1 {
-		return helpers.ExcludeFields(e.Payload, destination.Config.ExcludePayloadAttrs).(map[string]interface{})
+func (d *Dispatcher) customizePayload(e models.IncomingEvent, destination interfaces.DestinationInterface) map[string]interface{}  {
+	config := destination.(models.Destination).Config
+	if len(config.GetIncludePayloadAttrs()) >= 1 {
+		return helpers.IncludeFields(e.Payload, config.GetIncludePayloadAttrs()).(map[string]interface{})
+	} else if len(config.GetExcludePayloadAttrs()) >= 1 {
+		return helpers.ExcludeFields(e.Payload, config.GetExcludePayloadAttrs()).(map[string]interface{})
 	}
 
 	return e.Payload
@@ -205,8 +220,8 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		return
 	}
 
-	if dest.Config.KeepThrottledPayloads {
-		customizedPayload := d.customizePayload(&e, dest)
+	if dest.Config.GetKeepThrottledPayloads() {
+		customizedPayload := d.customizePayload(e, dest)
 		queueKey := getEventThrottledPayloadsKey(store, e, dest)
 		jsonString, jsonErr := json.Marshal(customizedPayload)
 		if jsonErr != nil {
@@ -220,7 +235,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
 	}
 
-	if dest.Config.IncludeDocument && dest.Config.KeepThrottledDocuments {
+	if dest.Config.GetIncludeDocument() && dest.Config.GetKeepThrottledDocuments() {
 		customizedDocument := d.customizeDocument(&e, dest, documentStore)
 		queueKey := getEventThrottledDocumentsKey(store, e, dest)
 		jsonString, jsonErr := json.Marshal(customizedDocument)
@@ -248,7 +263,8 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		}
 	} else {
 		// Create Value
-		_, saveErr := store.Set(dataKey, string(jsonString), dest.Config.GetThrottleValue()*2)
+		config := dest.Config
+		_, saveErr := store.Set(dataKey, string(jsonString), config.GetThrottleValue()*2)
 		if saveErr != nil {
 			panic(saveErr)
 		}
@@ -283,11 +299,11 @@ func getControlTimestamp(e models.IncomingEvent, defaultValue uint64) uint64 {
 	return value.(uint64)
 }
 
-func getEventKey(s interfaces.StoreInterface, e models.IncomingEvent, d models.Destination) string {
+func getEventKey(s interfaces.StoreInterface, e interfaces.IncomingEventInterface, d interfaces.DestinationInterface) string {
 	return s.DataKey(e, d, "", "")
 }
 
-func getEventDataKey(s interfaces.StoreInterface, e models.IncomingEvent, d models.Destination) string {
+func getEventDataKey(s interfaces.StoreInterface, e interfaces.IncomingEventInterface, d interfaces.DestinationInterface) string {
 	return s.DataKey(e, d, "", "-data")
 }
 
@@ -300,17 +316,18 @@ func getEventThrottledDocumentsKey(s interfaces.StoreInterface, e models.Incomin
 }
 
 func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
+	config := destination.Config
 	callbackLogger := dLogger.WithFields(log.Fields{
 		"action":         evt.Key,
 		"event":          evt.GetTraceInfo(),
-		"hook_name":      destination.Config.Name,
+		"hook_name":      config.GetName(),
 		"callback_url":   destination.GetCallbackURL(),
 		"document_store": destination.GetDocumentStore(),
 	})
 
 	defer func() {
 		if err := recover(); err != nil {
-			callbackLogger.Info(fmt.Sprintf("Event failed sending to %s [%s]", destination.Config.Name, destination.GetCallbackURL()))
+			callbackLogger.Info(fmt.Sprintf("Event failed sending to %s [%s]", config.GetName(), destination.GetCallbackURL()))
 			d.Errors = append(d.Errors, err.(*captin_errors.DispatcherError))
 		}
 		return
@@ -318,11 +335,11 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 
 	callbackLogger.Debug("Preprocess payload and document")
 
-	evt = d.customizeEvent(evt, destination, documentStore)
+	evt = d.customizeEvent(evt, destination, documentStore).(models.IncomingEvent)
 
-	evt = d.injectThrottledPayloads(evt, destination, store)
+	evt = d.injectThrottledPayloads(evt, destination, store).(models.IncomingEvent)
 
-	evt = d.injectThrottledDocuments(evt, destination, store)
+	evt = d.injectThrottledDocuments(evt, destination, store).(models.IncomingEvent)
 
 	callbackLogger.Debug("Final sift on dispatcher")
 
@@ -334,7 +351,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 
 	callbackLogger.Debug("Ready to send event")
 
-	senderKey := destination.Config.Sender
+	senderKey := config.GetSender()
 	if senderKey == "" {
 		senderKey = "http"
 	}
@@ -348,17 +365,22 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		return
 	}
 
-	if destination.Config.GetDelayValue() != time.Duration(0) {
+	if config.GetDelayValue() != time.Duration(0) {
 		// Sending message with delay in goroutine, no error will be caught
-		callbackLogger.Info(fmt.Sprintf("Event delayed with %s", destination.Config.Delay))
-		go time.AfterFunc(destination.Config.GetDelayValue(), func() {
+		callbackLogger.Info(fmt.Sprintf("Event delayed with %s", config.GetDelay()))
+		go time.AfterFunc(config.GetDelayValue(), func() {
 			delayedErr := sender.SendEvent(evt, destination)
 			if delayedErr != nil {
-				callbackLogger.WithFields(log.Fields{"error": delayedErr}).Error(fmt.Sprintf("Delayed event failed with error on %s [%s]", destination.Config.Name, destination.GetCallbackURL()))
+				callbackLogger.WithFields(log.Fields{"error": delayedErr}).Error(fmt.Sprintf("Delayed event failed with error on %s [%s]", config.GetName(), destination.GetCallbackURL()))
+				d.TriggerErrorHandler(&captin_errors.DispatcherError{
+					Msg:         delayedErr.Error(),
+					Destination: destination,
+					Event:       evt,
+				})
 				return
 			}
 
-			callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", destination.Config.Name, destination.GetCallbackURL()))
+			callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", config.GetName(), destination.GetCallbackURL()))
 		})
 		return
 	}
@@ -373,7 +395,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		return
 	}
 
-	callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", destination.Config.Name, destination.GetCallbackURL()))
+	callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", config.GetName(), destination.GetCallbackURL()))
 }
 
 func (d *Dispatcher) sendAfterEvent(key string, store interfaces.StoreInterface, dest models.Destination, documentStore interfaces.DocumentStoreInterface) func() {

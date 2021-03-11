@@ -3,9 +3,13 @@ package models
 import (
 	"encoding/json"
 	"github.com/google/uuid"
+
+	interfaces "github.com/shoplineapp/captin/interfaces"
 )
 
 type IncomingEvent struct {
+	interfaces.IncomingEventInterface
+
 	TraceId string
 	Key     string                 `json:"event_key"` // Required, The identifier of an event, usually form as PREFIX.MODEL.ACTION
 	Source  string                 `json:"source"`    // Required, Event source from
@@ -23,7 +27,11 @@ type IncomingEvent struct {
 func NewIncomingEvent(data []byte) IncomingEvent {
 	e := IncomingEvent{}
 	json.Unmarshal(data, &e)
-	e.TraceId = uuid.New().String()
+
+	// Reuse trace ID if it's given for tracing retry with the same ID
+	if e.TraceId == "" {
+		e.TraceId = uuid.New().String()
+	}
 	return e
 }
 

@@ -1,8 +1,8 @@
 package outgoing
 
 import (
-	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
+	destination_filters "github.com/shoplineapp/captin/destinations/filters"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -11,9 +11,9 @@ var cLogger = log.WithFields(log.Fields{"class": "Custom"})
 type Custom struct{}
 
 // Sift - Custom check will filter ineligible destination
-func (c Custom) Sift(e *models.IncomingEvent, destinations []models.Destination, filters []interfaces.DestinationFilter, middlewares []interfaces.DestinationMiddleware) []models.Destination {
+func (c Custom) Sift(e *models.IncomingEvent, destinations []models.Destination, filters []destination_filters.DestinationFilterInterface, middlewares []destination_filters.DestinationMiddlewareInterface) []models.Destination {
 	cLogger.WithFields(log.Fields{
-		"event":        e,
+		"event":        e.GetTraceInfo(),
 		"destinations": destinations,
 		"filters":      filters,
 		"middlewares":  middlewares,
@@ -37,5 +37,6 @@ func (c Custom) Sift(e *models.IncomingEvent, destinations []models.Destination,
 	for _, m := range middlewares {
 		sifted = m.Apply(e, sifted)
 	}
+
 	return sifted
 }

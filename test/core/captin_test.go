@@ -35,7 +35,7 @@ func TestNewCaptin(t *testing.T) {
 
 func TestExecute(t *testing.T) {
 	// When event is not given or is invalid
-	var errors []captin_errors.ErrorInterface
+	var errors []interfaces.ErrorInterface
 
 	_, errors = Captin{}.Execute(models.IncomingEvent{})
 

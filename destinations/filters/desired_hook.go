@@ -1,7 +1,6 @@
 package destination_filters
 
 import (
-	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
 )
 
@@ -24,12 +23,12 @@ func stringList(list []interface{}) []string {
 
 // DesiredHookFilter - Filter destination if given event has desired destination
 type DesiredHookFilter struct {
-	interfaces.DestinationFilter
+	DestinationFilterInterface
 }
 
 // Run - Get desired hooks in control and filter out exclusion
 func (f DesiredHookFilter) Run(e models.IncomingEvent, d models.Destination) (bool, error) {
-	hook := d.Config.Name
+	hook := d.Config.GetName()
 	list := e.Control["desired_hooks"]
 	switch list.(type) {
 	case []interface{}:

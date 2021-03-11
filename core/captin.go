@@ -20,10 +20,11 @@ var cLogger = log.WithFields(log.Fields{"class": "Captin"})
 // Captin - Captin instance
 type Captin struct {
 	ConfigMap            interfaces.ConfigMapperInterface
-	filters              []interfaces.DestinationFilter
-	middlewares          []interfaces.DestinationMiddleware
-	dispatchFilters	     []interfaces.DestinationFilter
-	dispatchMiddlewares  []interfaces.DestinationMiddleware
+	filters              []destination_filters.DestinationFilterInterface
+	middlewares          []destination_filters.DestinationMiddlewareInterface
+	dispatchFilters	     []destination_filters.DestinationFilterInterface
+	dispatchMiddlewares  []destination_filters.DestinationMiddlewareInterface
+	dispatchErrorHandler interfaces.ErrorHandlerInterface
 	SenderMapping        map[string]interfaces.EventSenderInterface
 	store                interfaces.StoreInterface
 	DocumentStoreMapping map[string]interfaces.DocumentStoreInterface
@@ -38,8 +39,8 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 		"beanstalkd": &senders.BeanstalkdSender{},
 	}
 	c := Captin{
-		ConfigMap: configMap,
-		filters: []interfaces.DestinationFilter{
+		ConfigMap: configMap.(models.ConfigurationMapper),
+		filters: []destination_filters.DestinationFilterInterface{
 			destination_filters.ValidateFilter{},
 			destination_filters.SourceFilter{},
 			destination_filters.DesiredHookFilter{},
@@ -72,22 +73,26 @@ func (c *Captin) SetThrottler(throttle interfaces.ThrottleInterface) {
 }
 
 // SetDestinationFilters - Set filters
-func (c *Captin) SetDestinationFilters(filters []interfaces.DestinationFilter) {
+func (c *Captin) SetDestinationFilters(filters []destination_filters.DestinationFilterInterface) {
 	c.filters = filters
 }
 
 // SetDestinationFilters - Set filters
-func (c *Captin) SetDispatchFilters(filters []interfaces.DestinationFilter) {
+func (c *Captin) SetDispatchFilters(filters []destination_filters.DestinationFilterInterface) {
 	c.dispatchFilters = filters
 }
 
 // SetDestinationMiddlewares - Set middlewares
-func (c *Captin) SetDestinationMiddlewares(middlewares []interfaces.DestinationMiddleware) {
+func (c *Captin) SetDestinationMiddlewares(middlewares []destination_filters.DestinationMiddlewareInterface) {
 	c.middlewares = middlewares
 }
 
-func (c *Captin) SetDispatchMiddlewares(middlewares []interfaces.DestinationMiddleware) {
+func (c *Captin) SetDispatchMiddlewares(middlewares []destination_filters.DestinationMiddlewareInterface) {
 	c.dispatchMiddlewares = middlewares
+}
+
+func (c *Captin) SetDispatchErrorHandler(handler interfaces.ErrorHandlerInterface) {
+	c.dispatchErrorHandler = handler
 }
 
 func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSenderInterface) {
@@ -95,15 +100,15 @@ func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSende
 }
 
 // Execute - Execute for events
-func (c Captin) Execute(e models.IncomingEvent) (bool, []captin_errors.ErrorInterface) {
+func (c Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfaces.ErrorInterface) {
+	e := ie.(models.IncomingEvent)
 	if e.IsValid() != true {
-		return false, []captin_errors.ErrorInterface{&captin_errors.ExecutionError{Cause: "invalid incoming event object"}}
+		return false, []interfaces.ErrorInterface{&captin_errors.ExecutionError{Cause: "invalid incoming event object"}}
 	}
 
 	configs := c.ConfigMap.ConfigsForKey(e.Key)
 
 	destinations := []models.Destination{}
-
 	for _, config := range configs {
 		destinations = append(destinations, models.Destination{Config: config})
 	}
@@ -118,6 +123,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, []captin_errors.ErrorInte
 	dispatcher := outgoing.NewDispatcherWithDestinations(destinations, c.SenderMapping)
 	dispatcher.SetFilters(c.dispatchFilters)
 	dispatcher.SetMiddlewares(c.dispatchMiddlewares)
+	dispatcher.SetErrorHandler(c.dispatchErrorHandler)
 	dispatcher.Dispatch(e, c.store, c.throttler, c.DocumentStoreMapping)
 
 	for _, err := range dispatcher.Errors {
@@ -128,6 +134,7 @@ func (c Captin) Execute(e models.IncomingEvent) (bool, []captin_errors.ErrorInte
 				"destination": dispatcherErr.Destination,
 				"reason":      dispatcherErr.Error(),
 			}).Error("Failed to dispatch event")
+			dispatcher.TriggerErrorHandler(dispatcherErr)
 		default:
 			cLogger.WithFields(log.Fields{"error": e}).Error("Unhandled error on dispatcher")
 		}
