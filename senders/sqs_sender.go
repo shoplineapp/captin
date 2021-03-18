@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	aws "github.com/aws/aws-sdk-go/aws"
+	aws_credentials "github.com/aws/aws-sdk-go/aws/credentials"
 	aws_session "github.com/aws/aws-sdk-go/aws/session"
 	aws_sqs "github.com/aws/aws-sdk-go/service/sqs"
 	aws_sqsiface "github.com/aws/aws-sdk-go/service/sqs/sqsiface"
@@ -18,18 +19,15 @@ var sLogger = log.WithFields(log.Fields{"class": "SqsSender"})
 // SqsSender - Send Event to AWS SQS
 type SqsSender struct {
 	interfaces.EventSenderInterface
-	Queue SqsSenderQueue
+	DefaultClient aws_sqsiface.SQSAPI
+	DestinationClientMap map[string]aws_sqsiface.SQSAPI
 }
 
-// SqsSenderQueue - Extra struct for mocking SQS
-type SqsSenderQueue struct {
-	Client aws_sqsiface.SQSAPI
-}
-
-func NewSqsSender(awsConfig aws.Config) *SqsSender {
-	session := aws_session.Must(aws_session.NewSession(&awsConfig))
+func NewSqsSender(defaultAwsConfig aws.Config) *SqsSender {
+	defaultSession := aws_session.Must(aws_session.NewSession(&defaultAwsConfig))
 	return &SqsSender{
-		Queue: SqsSenderQueue{Client: aws_sqs.New(session)},
+		DefaultClient: aws_sqs.New(defaultSession),
+		DestinationClientMap: map[string]aws_sqsiface.SQSAPI{},
 	}
 }
 
@@ -47,7 +45,7 @@ func (s *SqsSender) SendEvent(ev interfaces.IncomingEventInterface, dv interface
 		return jsonErr
 	}
 
-	_, err := s.Queue.Client.SendMessage(&aws_sqs.SendMessageInput{
+	_, err := s.GetClient(dv).SendMessage(&aws_sqs.SendMessageInput{
 		MessageBody: aws.String(string(payload)),
 		QueueUrl:    &queueURL,
 	})
@@ -57,4 +55,35 @@ func (s *SqsSender) SendEvent(ev interfaces.IncomingEventInterface, dv interface
 	}
 
 	return err
+}
+
+func (s *SqsSender) GetClient(dv interfaces.DestinationInterface) aws_sqsiface.SQSAPI {
+	d := dv.(models.Destination)
+	destName := d.Config.GetName()
+
+	if dv.GetSqsSenderConfig("USE_CUSTOM_CONFIG") == "true" {
+		_, queueInitialized := s.DestinationClientMap[destName]
+		if !queueInitialized {
+			awsConfig := aws.Config{}
+
+			if dv.GetSqsSenderConfig("AWS_ENDPOINT") != "" {
+				awsConfig.Endpoint = aws.String(dv.GetSqsSenderConfig("AWS_ENDPOINT"))
+			}
+
+			if dv.GetSqsSenderConfig("AWS_REGION") != "" {
+				awsConfig.Region = aws.String(dv.GetSqsSenderConfig("AWS_REGION"))
+			}
+
+			if dv.GetSqsSenderConfig("AWS_ACCESS_KEY_ID") != "" && dv.GetSqsSenderConfig("AWS_SECRET_ACCESS_KEY") != "" {
+				awsConfig.Credentials = aws_credentials.NewStaticCredentials(dv.GetSqsSenderConfig("AWS_ACCESS_KEY_ID"), dv.GetSqsSenderConfig("AWS_SECRET_ACCESS_KEY"), "")
+			}
+
+			session := aws_session.Must(aws_session.NewSession(&awsConfig))
+			s.DestinationClientMap[destName] = aws_sqs.New(session)
+		}
+
+		return s.DestinationClientMap[destName]
+	}
+
+	return s.DefaultClient
 }
