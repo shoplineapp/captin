@@ -2,6 +2,7 @@ package models
 
 import (
 	interfaces "github.com/shoplineapp/captin/interfaces"
+	"fmt"
 )
 
 // Destination - Event dispatch destination
@@ -25,6 +26,11 @@ func (d Destination) GetCallbackURL() string {
 		return d.callbackUrl
 	}
 	return d.Config.GetCallbackURL()
+}
+
+func (d Destination) GetSqsSenderConfig(key string) string {
+	_, value := d.Config.GetByEnv(fmt.Sprintf("SQS_SENDER_%s", key))
+	return value
 }
 
 func (d Destination) GetDocumentStore() string {

@@ -22,6 +22,7 @@ type IncomingEventInterface interface {
 
 type DestinationInterface interface {
 	GetCallbackURL() string
+	GetSqsSenderConfig(key string) string
 	GetDocumentStore() string
 }
 
