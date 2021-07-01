@@ -9,7 +9,7 @@ blocks:
     task:
       prologue:
         commands:
-          - sem-version go 1.12
+          - sem-version go 1.15
           # Go project boiler plate
           - export "SEMAPHORE_GIT_DIR=~/src/${SEMAPHORE_PROJECT_NAME}"
           - export "PATH=$(go env GOPATH)/bin:${PATH}"
@@ -26,7 +26,7 @@ blocks:
     task:
       prologue:
         commands:
-          - sem-version go 1.12
+          - sem-version go 1.15
           # Go project boiler plate
           - export "SEMAPHORE_GIT_DIR=~/src/${SEMAPHORE_PROJECT_NAME}"
           - export "PATH=$(go env GOPATH)/bin:${PATH}"

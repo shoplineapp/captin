@@ -1,5 +1,5 @@
 # Build Stage
-FROM golang:1.12.5-alpine3.9 AS build-env
+FROM golang:1.15.7-alpine3.9 AS build-env
 RUN mkdir /app
 WORKDIR /app
 RUN apk add git

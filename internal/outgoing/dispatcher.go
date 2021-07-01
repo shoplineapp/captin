@@ -328,7 +328,11 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	defer func() {
 		if err := recover(); err != nil {
 			callbackLogger.Info(fmt.Sprintf("Event failed sending to %s [%s]", config.GetName(), destination.GetCallbackURL()))
-			d.Errors = append(d.Errors, err.(*captin_errors.DispatcherError))
+			d.Errors = append(d.Errors, &captin_errors.DispatcherError{
+				Msg:         fmt.Sprintf("%+v", err),
+				Destination: destination,
+				Event:       evt,
+			})
 		}
 		return
 	}()

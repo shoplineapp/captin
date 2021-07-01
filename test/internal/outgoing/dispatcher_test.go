@@ -86,6 +86,36 @@ func TestDispatchEvents_Error(t *testing.T) {
 	assert.Equal(t, 6, len(dispatcher.Errors))
 }
 
+func TestDispatchEvents_SendEvent_WithNotDispatcherError(t *testing.T) {
+	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.json")
+
+	sender.On("SendEvent", mock.Anything, mock.Anything).Panic("Non-dispatcher panic")
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 1},
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStores)
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 2},
+		TargetType: "Product",
+		TargetId:   "product_id_2",
+	}, store, throttler, documentStores)
+
+	time.Sleep(50 * time.Millisecond)
+
+	sender.AssertNumberOfCalls(t, "SendEvent", 6)
+	assert.Equal(t, 6, len(dispatcher.Errors))
+}
+
 func TestDispatchEvents(t *testing.T) {
 	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.json")
 
