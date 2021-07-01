@@ -316,6 +316,7 @@ func getEventThrottledDocumentsKey(s interfaces.StoreInterface, e models.Incomin
 }
 
 func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
+	done := make(chan int, 1)
 	config := destination.Config
 	callbackLogger := dLogger.WithFields(log.Fields{
 		"action":         evt.Key,
@@ -346,6 +347,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	sifted := Custom{}.Sift(&evt, []models.Destination{destination}, d.filters, d.middlewares)
 	if len(sifted) == 0 {
 		callbackLogger.Info("Event interrupted by dispatcher filters")
+		done <- 0
 		return
 	}
 
@@ -362,12 +364,14 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 			Destination: destination,
 			Event:       evt,
 		})
+		done <- 0
 		return
 	}
 
 	if config.GetDelayValue() != time.Duration(0) {
 		// Sending message with delay in goroutine, no error will be caught
 		callbackLogger.Info(fmt.Sprintf("Event delayed with %s", config.GetDelay()))
+
 		go time.AfterFunc(config.GetDelayValue(), func() {
 			delayedErr := sender.SendEvent(evt, destination)
 			if delayedErr != nil {
@@ -377,25 +381,31 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 					Destination: destination,
 					Event:       evt,
 				})
+				done <- 0
 				return
 			}
 
+			done <- 1
 			callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", config.GetName(), destination.GetCallbackURL()))
 		})
 		return
 	}
 
 	err := sender.SendEvent(evt, destination)
+
 	if err != nil {
 		panic(&captin_errors.DispatcherError{
 			Msg:         err.Error(),
 			Destination: destination,
 			Event:       evt,
 		})
+		done <- 0
 		return
 	}
 
+	done <- 1
 	callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", config.GetName(), destination.GetCallbackURL()))
+	<-done
 }
 
 func (d *Dispatcher) sendAfterEvent(key string, store interfaces.StoreInterface, dest models.Destination, documentStore interfaces.DocumentStoreInterface) func() {
