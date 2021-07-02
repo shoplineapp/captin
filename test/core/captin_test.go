@@ -36,8 +36,9 @@ func TestNewCaptin(t *testing.T) {
 func TestExecute(t *testing.T) {
 	// When event is not given or is invalid
 	var errors []interfaces.ErrorInterface
+	captin := Captin{}
 
-	_, errors = Captin{}.Execute(models.IncomingEvent{})
+	_, errors = captin.Execute(models.IncomingEvent{})
 
 	if assert.Error(t, errors[0], "invalid incoming event") {
 		assert.IsType(t, errors[0], &captin_errors.ExecutionError{})
