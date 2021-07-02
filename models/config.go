@@ -53,7 +53,7 @@ func (c Configuration) GetDelayValue() time.Duration {
 
 // GetTimeValueMillis - Get millisecond from time value string
 func (c Configuration) GetTimeValueMillis(timeValue string) time.Duration {
-	match := regexp.MustCompile("(\\d+(?:\\.\\d+)?)(s|ms)")
+	match := regexp.MustCompile("(\\d+(?:\\.\\d+)?)(s|ms|m|h)")
 	res := match.FindAllStringSubmatch(timeValue, -1)
 
 	for i := range res {
@@ -70,6 +70,10 @@ func (c Configuration) GetTimeValueMillis(timeValue string) time.Duration {
 			return time.Millisecond * time.Duration(value)
 		case "s":
 			return time.Second * time.Duration(value)
+		case "m":
+			return time.Minute * time.Duration(value)
+		case "h":
+			return time.Hour * time.Duration(value)
 		default:
 			panic("unrecognized time unit")
 		}

@@ -17,14 +17,19 @@ import (
 
 var cLogger = log.WithFields(log.Fields{"class": "Captin"})
 
+var STATUS_READY = "ready"
+var STATUS_RUNNING = "running"
+
 // Captin - Captin instance
 type Captin struct {
+	Status               string
 	ConfigMap            interfaces.ConfigMapperInterface
 	filters              []destination_filters.DestinationFilterInterface
 	middlewares          []destination_filters.DestinationMiddlewareInterface
 	dispatchFilters	     []destination_filters.DestinationFilterInterface
 	dispatchMiddlewares  []destination_filters.DestinationMiddlewareInterface
 	dispatchErrorHandler interfaces.ErrorHandlerInterface
+	dispatchDelayer      interfaces.DispatchDelayerInterface
 	SenderMapping        map[string]interfaces.EventSenderInterface
 	store                interfaces.StoreInterface
 	DocumentStoreMapping map[string]interfaces.DocumentStoreInterface
@@ -39,6 +44,7 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 		"beanstalkd": &senders.BeanstalkdSender{},
 	}
 	c := Captin{
+		Status: STATUS_READY,
 		ConfigMap: configMap.(models.ConfigurationMapper),
 		filters: []destination_filters.DestinationFilterInterface{
 			destination_filters.ValidateFilter{},
@@ -95,12 +101,22 @@ func (c *Captin) SetDispatchErrorHandler(handler interfaces.ErrorHandlerInterfac
 	c.dispatchErrorHandler = handler
 }
 
+func (c *Captin) SetDispatchDelayer(delayer interfaces.DispatchDelayerInterface) {
+	c.dispatchDelayer = delayer
+}
+
 func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSenderInterface) {
 	c.SenderMapping = senderMapping
 }
 
+func (c Captin) IsRunning() bool {
+	return c.Status == STATUS_RUNNING
+}
+
 // Execute - Execute for events
-func (c Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfaces.ErrorInterface) {
+func (c *Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfaces.ErrorInterface) {
+	c.Status = STATUS_RUNNING
+
 	e := ie.(models.IncomingEvent)
 	if e.IsValid() != true {
 		return false, []interfaces.ErrorInterface{&captin_errors.ExecutionError{Cause: "invalid incoming event object"}}
@@ -124,6 +140,7 @@ func (c Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interface
 	dispatcher.SetFilters(c.dispatchFilters)
 	dispatcher.SetMiddlewares(c.dispatchMiddlewares)
 	dispatcher.SetErrorHandler(c.dispatchErrorHandler)
+	dispatcher.SetDelayer(c.dispatchDelayer)
 	dispatcher.Dispatch(e, c.store, c.throttler, c.DocumentStoreMapping)
 
 	for _, err := range dispatcher.Errors {
@@ -142,5 +159,6 @@ func (c Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interface
 
 	cLogger.Debug(fmt.Sprintf("Captin event executed, %d destinations, %d failed", len(destinations), len(dispatcher.Errors)))
 
+	c.Status = STATUS_READY
 	return true, dispatcher.Errors
 }

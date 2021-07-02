@@ -7,6 +7,7 @@ import (
 // CaptinInterface - Captin Interface
 type CaptinInterface interface {
 	Execute(e IncomingEventInterface) (bool, []ErrorInterface)
+	IsRunning() bool
 }
 
 // EventSenderInterface - Event Sender Interface
