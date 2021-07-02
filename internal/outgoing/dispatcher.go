@@ -372,6 +372,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	if config.GetDelayValue() != time.Duration(0) {
 		// Sending message with delay in goroutine, no error will be caught
 		callbackLogger.Info(fmt.Sprintf("Event delayed with %s", config.GetDelay()))
+		ch := make(chan int, 1)
 		go time.AfterFunc(config.GetDelayValue(), func() {
 			delayedErr := sender.SendEvent(evt, destination)
 			if delayedErr != nil {
@@ -381,11 +382,12 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 					Destination: destination,
 					Event:       evt,
 				})
-				return
+			} else {
+				callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", config.GetName(), destination.GetCallbackURL()))
 			}
-
-			callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", config.GetName(), destination.GetCallbackURL()))
+			ch <- 1
 		})
+		<-ch // waiting for delayed execution
 		return
 	}
 
