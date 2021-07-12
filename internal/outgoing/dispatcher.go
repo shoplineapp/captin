@@ -27,6 +27,7 @@ type Dispatcher struct {
 	filters        []destination_filters.DestinationFilterInterface
 	middlewares    []destination_filters.DestinationMiddlewareInterface
 	errorHandler   interfaces.ErrorHandlerInterface
+	delayer        interfaces.DispatchDelayerInterface
 }
 
 // NewDispatcherWithDestinations - Create Outgoing event dispatcher with destinations
@@ -55,6 +56,10 @@ func (d *Dispatcher) SetMiddlewares(middlewares []destination_filters.Destinatio
 
 func (d *Dispatcher) SetErrorHandler(handler interfaces.ErrorHandlerInterface) {
 	d.errorHandler = handler
+}
+
+func (d *Dispatcher) SetDelayer(delayer interfaces.DispatchDelayerInterface) {
+	d.delayer = delayer
 }
 
 // Dispatch - Dispatch an event to outgoing webhook
@@ -270,7 +275,14 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		}
 
 		// Schedule send event later
-		time.AfterFunc(timeRemain, d.sendAfterEvent(dataKey, store, dest, documentStore))
+		time.AfterFunc(timeRemain, func() {
+			dLogger.WithFields(log.Fields{"key": dataKey}).Debug("After event callback")
+			payload, _, _, _ := store.Get(dataKey)
+			event := models.IncomingEvent{}
+			json.Unmarshal([]byte(payload), &event)
+			d.sendEvent(event, dest, store, documentStore)
+			store.Remove(dataKey)
+		})
 	}
 }
 
@@ -369,48 +381,37 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		return
 	}
 
-	if config.GetDelayValue() != time.Duration(0) {
-		// Sending message with delay in goroutine, no error will be caught
-		callbackLogger.Info(fmt.Sprintf("Event delayed with %s", config.GetDelay()))
-		ch := make(chan int, 1)
-		go time.AfterFunc(config.GetDelayValue(), func() {
-			delayedErr := sender.SendEvent(evt, destination)
-			if delayedErr != nil {
-				callbackLogger.WithFields(log.Fields{"error": delayedErr}).Error(fmt.Sprintf("Delayed event failed with error on %s [%s]", config.GetName(), destination.GetCallbackURL()))
-				d.TriggerErrorHandler(&captin_errors.DispatcherError{
-					Msg:         delayedErr.Error(),
+	// Wrap event sender and error handling as closure for reusing in delayer
+	_sendEvent := func() {
+		defer func() {
+			if err := recover(); err != nil {
+				d.Errors = append(d.Errors, &captin_errors.DispatcherError{
+					Msg:         fmt.Sprintf("%+v", err),
 					Destination: destination,
 					Event:       evt,
 				})
-			} else {
-				callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", config.GetName(), destination.GetCallbackURL()))
 			}
-			ch <- 1
-		})
-		<-ch // waiting for delayed execution
-		return
+			return
+		}()
+
+		err := sender.SendEvent(evt, destination)
+		if err != nil {
+			panic(err)
+			return
+		}
+		callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", config.GetName(), destination.GetCallbackURL()))
 	}
 
-	err := sender.SendEvent(evt, destination)
-	if err != nil {
-		panic(&captin_errors.DispatcherError{
-			Msg:         err.Error(),
-			Destination: destination,
-			Event:       evt,
-		})
-		return
+	if destination.RequireDelay(evt) {
+		// Sending message with delay in goroutine, no error will be caught
+		callbackLogger.Info(fmt.Sprintf("Event requires delay"))
+		if d.delayer != nil {
+			d.delayer.Execute(evt, destination, _sendEvent)
+			return
+		} else {
+			callbackLogger.Warn(fmt.Sprintf("Delayer not found, send event immediately"))
+		}
 	}
 
-	callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", config.GetName(), destination.GetCallbackURL()))
-}
-
-func (d *Dispatcher) sendAfterEvent(key string, store interfaces.StoreInterface, dest models.Destination, documentStore interfaces.DocumentStoreInterface) func() {
-	return func() {
-		dLogger.WithFields(log.Fields{"key": key}).Debug("After event callback")
-		payload, _, _, _ := store.Get(key)
-		event := models.IncomingEvent{}
-		json.Unmarshal([]byte(payload), &event)
-		d.sendEvent(event, dest, store, documentStore)
-		store.Remove(key)
-	}
+	_sendEvent()
 }

@@ -1,6 +1,8 @@
 package models
 
 import (
+	"time"
+	"strconv"
 	"encoding/json"
 	"github.com/google/uuid"
 
@@ -37,11 +39,29 @@ func NewIncomingEvent(data []byte) IncomingEvent {
 
 func (e IncomingEvent) GetTraceInfo() map[string]interface{} {
 	return map[string]interface{}{
-		"TraceId": e.TraceId,
-		"Key":     e.Key,
+		"trace_id": e.TraceId,
+		"key":     e.Key,
+		"source":  e.Source,
 		"type":    e.TargetType,
 		"id":      e.TargetId,
 	}
+}
+
+func (e IncomingEvent) GetControl() map[string]interface{} {
+	return e.Control
+}
+
+func (e IncomingEvent) GetOutstandingDelaySeconds() time.Duration {
+	if e.Control["outstanding_delay_seconds"] == nil {
+		return time.Duration(-1) * time.Second
+	}
+
+	s, err := strconv.Atoi(e.Control["outstanding_delay_seconds"].(string))
+	if err != nil || s <= 0 {
+		s = 0
+	}
+
+	return time.Duration(s) * time.Second
 }
 
 func (e IncomingEvent) IsValid() bool {

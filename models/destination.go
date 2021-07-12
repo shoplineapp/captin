@@ -3,6 +3,7 @@ package models
 import (
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	"fmt"
+	"time"
 )
 
 // Destination - Event dispatch destination
@@ -11,6 +12,10 @@ type Destination struct {
 
 	Config interfaces.ConfigurationInterface
 	callbackUrl string
+}
+
+func (d Destination) GetConfig() interfaces.ConfigurationInterface {
+	return d.Config
 }
 
 func (d *Destination) SetCallbackURL(url string) {
@@ -42,4 +47,13 @@ func (d Destination) GetDocumentStore() string {
 		return d.Config.GetDocumentStore()
 	}
 	return value
+}
+
+func (d Destination) RequireDelay(evt interfaces.IncomingEventInterface) bool {
+	if (d.Config.GetDelayValue() <= time.Duration(0) ||
+            evt.GetOutstandingDelaySeconds() == time.Duration(0)) {
+		return false
+	}
+
+	return true
 }

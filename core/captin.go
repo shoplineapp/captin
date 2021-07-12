@@ -29,6 +29,7 @@ type Captin struct {
 	dispatchFilters	     []destination_filters.DestinationFilterInterface
 	dispatchMiddlewares  []destination_filters.DestinationMiddlewareInterface
 	dispatchErrorHandler interfaces.ErrorHandlerInterface
+	dispatchDelayer      interfaces.DispatchDelayerInterface
 	SenderMapping        map[string]interfaces.EventSenderInterface
 	store                interfaces.StoreInterface
 	DocumentStoreMapping map[string]interfaces.DocumentStoreInterface
@@ -100,6 +101,10 @@ func (c *Captin) SetDispatchErrorHandler(handler interfaces.ErrorHandlerInterfac
 	c.dispatchErrorHandler = handler
 }
 
+func (c *Captin) SetDispatchDelayer(delayer interfaces.DispatchDelayerInterface) {
+	c.dispatchDelayer = delayer
+}
+
 func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSenderInterface) {
 	c.SenderMapping = senderMapping
 }
@@ -135,6 +140,7 @@ func (c *Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfac
 	dispatcher.SetFilters(c.dispatchFilters)
 	dispatcher.SetMiddlewares(c.dispatchMiddlewares)
 	dispatcher.SetErrorHandler(c.dispatchErrorHandler)
+	dispatcher.SetDelayer(c.dispatchDelayer)
 	dispatcher.Dispatch(e, c.store, c.throttler, c.DocumentStoreMapping)
 
 	for _, err := range dispatcher.Errors {

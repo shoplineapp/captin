@@ -9,7 +9,7 @@ import (
 	. "github.com/shoplineapp/captin/models"
 )
 
-func TestGetCallbackURL(t *testing.T) {
+func TestDestination_GetCallbackURL(t *testing.T) {
 	var config Configuration
 	var subject Destination
 
@@ -41,4 +41,34 @@ func TestDestination_GetDocumentStore(t *testing.T) {
 	config = Configuration{Name: "callback_c"}
 	subject = Destination{Config: config}
 	assert.Equal(t, overriden, subject.GetDocumentStore())
+}
+
+func TestDestination_RequireDelay(t *testing.T) {
+	var config Configuration
+	var subject Destination
+	var event IncomingEvent
+
+	// Hook without delay and event without control
+	config = Configuration{Name: "callback_without_delay"}
+	subject = Destination{Config: config}
+	event = IncomingEvent{}
+	assert.Equal(t, false, subject.RequireDelay(event))
+
+	// Hook with delay and event without control
+	config = Configuration{Name: "callback_without_delay", Delay: "10s"}
+	subject = Destination{Config: config}
+	event = IncomingEvent{}
+	assert.Equal(t, true, subject.RequireDelay(event))
+
+	// Hook with delay and event with control
+	config = Configuration{Name: "callback_without_delay", Delay: "10s"}
+	subject = Destination{Config: config}
+	event = IncomingEvent{Control: map[string]interface{}{ "outstanding_delay_seconds": "10" }}
+	assert.Equal(t, true, subject.RequireDelay(event))
+
+	// Hook with delay and event with 0 outstanding delay in control
+	config = Configuration{Name: "callback_without_delay", Delay: "10s"}
+	subject = Destination{Config: config}
+	event = IncomingEvent{Control: map[string]interface{}{ "outstanding_delay_seconds": "0" }}
+	assert.Equal(t, false, subject.RequireDelay(event))
 }

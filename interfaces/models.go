@@ -17,10 +17,13 @@ type ConfigMapperInterface interface {
 
 type IncomingEventInterface interface {
 	GetTraceInfo() map[string]interface{}
+	GetControl() map[string]interface{}
+	GetOutstandingDelaySeconds() time.Duration
 	IsValid() bool
 }
 
 type DestinationInterface interface {
+	GetConfig() ConfigurationInterface
 	GetCallbackURL() string
 	GetSqsSenderConfig(key string) string
 	GetDocumentStore() string
