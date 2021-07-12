@@ -1,11 +1,11 @@
 package main
 
 import (
-	"bufio"
+	"time"
 	"os"
+	"os/signal"
+	"syscall"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	core "github.com/shoplineapp/captin/core"
 	models "github.com/shoplineapp/captin/models"
@@ -16,7 +16,7 @@ func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.DebugLevel)
-	log.Info("* Starting captin (Press ENTER to quit)")
+	log.Info("* Starting captin (Press ctrl+c to quit)")
 
 	pwd, _ := os.Getwd()
 	path := os.Args[1:][0]
@@ -25,26 +25,34 @@ func main() {
 	configMapper := models.NewConfigurationMapperFromPath(absPath)
 	captin := core.NewCaptin(*configMapper)
 
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		log.Debug("> ")
-		text, _ := reader.ReadString('\n')
-		// convert CRLF to LF
-		text = strings.Replace(text, "\n", "", -1)
-		parsedInt, err := strconv.Atoi(text)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	enabled := true
 
-		if err == nil {
-			for i := 0; i < parsedInt; i++ {
-				captin.Execute(models.IncomingEvent{
-					Key:        "product.update",
-					Source:     "core",
-					Payload:    map[string]interface{}{"field1": 1},
-					TargetType: "Product",
-					TargetId:   "product_id",
-				})
-			}
-		} else {
-			os.Exit(0)
+	go func() {
+		for enabled && captin.IsRunning() != true {
+			captin.Execute(models.IncomingEvent{
+				Key:        "product.update",
+				Source:     "core",
+				Payload:    map[string]interface{}{"field1": 1},
+				TargetType: "Product",
+				TargetId:   "product_id",
+			})
+			time.Sleep(1 * time.Second)
+		}
+	}()
+
+	<-quit
+	enabled = false
+	log.Println("Gracefully shutting down...")
+	for {
+		time.Sleep(1 * time.Second)
+		if captin.IsRunning() != true {
+			log.Println("Tasks released")
+			break
 		}
 	}
+
+	log.Println("Bye!")
+	os.Exit(0)
 }
