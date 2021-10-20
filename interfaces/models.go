@@ -49,6 +49,7 @@ type ConfigurationInterface interface {
 	GetAllowLoopback() bool
 	GetSender() string
 	GetDocumentStore() string
+	GetRetryBackoff() []string
 	GetIncludeDocumentAttrs() []string
 	GetExcludeDocumentAttrs() []string
 	GetIncludePayloadAttrs() []string
