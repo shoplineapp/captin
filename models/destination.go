@@ -69,14 +69,25 @@ func (d Destination) GetRetryBackoffSeconds(evt interfaces.IncomingEventInterfac
 	if len(backoffConfig) <= 0 && globalRetryBackoffSeconds != "" {
 		backoffConfig = trimArray(strings.Split(globalRetryBackoffSeconds, ","))
 	}
-	control := evt.GetControl()
-	retryCount, _ := control["retry_count"].(float64)
-	if (len(backoffConfig) <= int(retryCount)) {
+
+	if len(backoffConfig) == 0 {
 		return DEFAULT_RETRY_BACKOFF_SECONDS
 	}
+
+	control := evt.GetControl()
+	retryCount, _ := control["retry_count"].(float64)
+	if (len(backoffConfig) > 0 && len(backoffConfig) <= int(retryCount)) {
+		lastConfig := backoffConfig[(len(backoffConfig) - 1):]
+		seconds, pErr := strconv.ParseInt(lastConfig[0], 10, 64)
+		if pErr != nil {
+			return DEFAULT_RETRY_BACKOFF_SECONDS
+		}
+		return seconds
+	}
+
 	seconds, err := strconv.ParseInt(backoffConfig[int(retryCount)], 10, 64)
 	if err != nil {
-	    return DEFAULT_RETRY_BACKOFF_SECONDS
+		return DEFAULT_RETRY_BACKOFF_SECONDS
 	}
 	return seconds
 }

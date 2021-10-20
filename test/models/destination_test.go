@@ -100,7 +100,7 @@ func TestDestination_GetRetryBackoffSeconds(t *testing.T) {
 	config = Configuration{Name: "retry_backoff_no_retry", RetryBackoff: "5,30,200,600"}
 	subject = Destination{Config: config}
 	event = IncomingEvent{Control: map[string]interface{}{"retry_count": float64(4)}}
-	assert.Equal(t, int64(DEFAULT_RETRY_BACKOFF_SECONDS), subject.GetRetryBackoffSeconds(event))
+	assert.Equal(t, int64(600), subject.GetRetryBackoffSeconds(event))
 
 	// Hook with retry backoff AND event with retry record
 	config = Configuration{Name: "retry_backoff_has_retry", RetryBackoff: "5,30,200,600"}
@@ -112,5 +112,5 @@ func TestDestination_GetRetryBackoffSeconds(t *testing.T) {
 	config = Configuration{Name: "retry_backoff_too_many_retry", RetryBackoff: "5,30,200,600"}
 	subject = Destination{Config: config}
 	event = IncomingEvent{Control: map[string]interface{}{"retry_count": float64(100)}}
-	assert.Equal(t, int64(DEFAULT_RETRY_BACKOFF_SECONDS), subject.GetRetryBackoffSeconds(event))
+	assert.Equal(t, int64(600), subject.GetRetryBackoffSeconds(event))
 }
