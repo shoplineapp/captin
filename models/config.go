@@ -29,6 +29,7 @@ type Configuration struct {
 	AllowLoopback            bool              `json:"allow_loopback"`
 	Sender                   string            `json:"sender"`
 	DocumentStore            string            `json:"document_store"`
+	RetryBackoff             string            `json:"retry_backoff"`
 	IncludeDocumentAttrs     []string          `json:"include_document_attrs"`
 	ExcludeDocumentAttrs     []string          `json:"exclude_document_attrs"`
 	IncludePayloadAttrs      []string          `json:"include_payload_attrs"`
@@ -140,6 +141,10 @@ func (c Configuration) GetSender() string {
 
 func (c Configuration) GetDocumentStore() string {
 	return c.DocumentStore
+}
+
+func (c Configuration) GetRetryBackoff() []string {
+	return strings.Split(c.RetryBackoff, ",")
 }
 
 func (c Configuration) GetIncludeDocumentAttrs() []string {

@@ -72,3 +72,45 @@ func TestDestination_RequireDelay(t *testing.T) {
 	event = IncomingEvent{Control: map[string]interface{}{ "outstanding_delay_seconds": "0" }}
 	assert.Equal(t, false, subject.RequireDelay(event))
 }
+
+func TestDestination_GetRetryBackoffSeconds(t *testing.T) {
+	var config Configuration
+	var subject Destination
+	var event IncomingEvent
+
+	// Hook without retry backoff AND event without any retry record
+	config = Configuration{Name: "no_retry_backoff_no_retry"}
+	subject = Destination{Config: config}
+	event = IncomingEvent{}
+	assert.Equal(t, int64(DEFAULT_RETRY_BACKOFF_SECONDS), subject.GetRetryBackoffSeconds(event))
+
+	// Hook without retry backoff AND event with retry record
+	config = Configuration{Name: "no_retry_backoff_has_retry"}
+	subject = Destination{Config: config}
+	event = IncomingEvent{Control: map[string]interface{}{"retry_count": float64(2)}}
+	assert.Equal(t, int64(DEFAULT_RETRY_BACKOFF_SECONDS), subject.GetRetryBackoffSeconds(event))
+
+	// Hook with retry backoff AND event without any retry record
+	config = Configuration{Name: "retry_backoff_no_retry", RetryBackoff: "5,30,200,600"}
+	subject = Destination{Config: config}
+	event = IncomingEvent{}
+	assert.Equal(t, int64(5), subject.GetRetryBackoffSeconds(event))
+
+	// Hook with retry backoff AND event with retry record
+	config = Configuration{Name: "retry_backoff_no_retry", RetryBackoff: "5,30,200,600"}
+	subject = Destination{Config: config}
+	event = IncomingEvent{Control: map[string]interface{}{"retry_count": float64(4)}}
+	assert.Equal(t, int64(600), subject.GetRetryBackoffSeconds(event))
+
+	// Hook with retry backoff AND event with retry record
+	config = Configuration{Name: "retry_backoff_has_retry", RetryBackoff: "5,30,200,600"}
+	subject = Destination{Config: config}
+	event = IncomingEvent{Control: map[string]interface{}{"retry_count": float64(2)}}
+	assert.Equal(t, int64(200), subject.GetRetryBackoffSeconds(event))
+
+	// Hook with retry backoff AND event with retries beyond config
+	config = Configuration{Name: "retry_backoff_too_many_retry", RetryBackoff: "5,30,200,600"}
+	subject = Destination{Config: config}
+	event = IncomingEvent{Control: map[string]interface{}{"retry_count": float64(100)}}
+	assert.Equal(t, int64(600), subject.GetRetryBackoffSeconds(event))
+}
