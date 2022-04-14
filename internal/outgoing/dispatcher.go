@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"time"
 
+	destination_filters "github.com/shoplineapp/captin/destinations/filters"
 	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
-	destination_filters "github.com/shoplineapp/captin/destinations/filters"
-	models "github.com/shoplineapp/captin/models"
 	documentStores "github.com/shoplineapp/captin/internal/document_stores"
 	helpers "github.com/shoplineapp/captin/internal/helpers"
+	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -269,6 +269,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 	} else {
 		// Create Value
 		config := dest.Config
+		dLogger.WithFields(log.Fields{"key": dataKey, "event": e.GetTraceInfo(), "payload": string(jsonString)}).Info("Store data for delayed event")
 		_, saveErr := store.Set(dataKey, string(jsonString), config.GetThrottleValue()*2)
 		if saveErr != nil {
 			panic(saveErr)
@@ -278,6 +279,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		time.AfterFunc(timeRemain, func() {
 			dLogger.WithFields(log.Fields{"key": dataKey}).Debug("After event callback")
 			payload, _, _, _ := store.Get(dataKey)
+			dLogger.WithFields(log.Fields{"key": dataKey, "event": e.GetTraceInfo(), "payload": payload}).Info("Fetch data for delayed event")
 			event := models.IncomingEvent{}
 			json.Unmarshal([]byte(payload), &event)
 			d.sendEvent(event, dest, store, documentStore)
