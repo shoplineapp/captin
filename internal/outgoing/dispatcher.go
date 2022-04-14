@@ -180,7 +180,7 @@ func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination mode
 	}
 }
 
-func (d *Dispatcher) customizePayload(e models.IncomingEvent, destination interfaces.DestinationInterface) map[string]interface{}  {
+func (d *Dispatcher) customizePayload(e models.IncomingEvent, destination interfaces.DestinationInterface) map[string]interface{} {
 	config := destination.(models.Destination).Config
 	if len(config.GetIncludePayloadAttrs()) >= 1 {
 		return helpers.IncludeFields(e.Payload, config.GetIncludePayloadAttrs()).(map[string]interface{})
@@ -233,8 +233,8 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 			panic(jsonErr)
 		}
 		dLogger.WithFields(log.Fields{
-			"queueKey":  queueKey,
-			"event":        e.GetTraceInfo(),
+			"queueKey":       queueKey,
+			"event":          e.GetTraceInfo(),
 			"enqueuePayload": jsonString,
 		}).Debug("Storing throttled payload")
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
@@ -248,8 +248,8 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 			panic(jsonErr)
 		}
 		dLogger.WithFields(log.Fields{
-			"queueKey":  queueKey,
-			"event":        e.GetTraceInfo(),
+			"queueKey":        queueKey,
+			"event":           e.GetTraceInfo(),
 			"enqueueDocument": jsonString,
 		}).Debug("Storing throttled document")
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
@@ -269,17 +269,18 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 	} else {
 		// Create Value
 		config := dest.Config
-		dLogger.WithFields(log.Fields{"key": dataKey, "event": e.GetTraceInfo(), "payload": string(jsonString), "timeRemain": timeRemain}).Info("Store data for delayed event")
+		dLogger.WithFields(log.Fields{"key": dataKey, "event": e.GetTraceInfo(), "payload": string(jsonString)}).Info("Store data for delayed event")
 		_, saveErr := store.Set(dataKey, string(jsonString), config.GetThrottleValue()*2)
 		if saveErr != nil {
 			panic(saveErr)
 		}
 
 		// Schedule send event later
+		dLogger.WithFields(log.Fields{"key": dataKey, "event": e.GetTraceInfo(), "timeRemain": timeRemain}).Info("AfterFunc")
 		time.AfterFunc(timeRemain, func() {
 			dLogger.WithFields(log.Fields{"key": dataKey}).Debug("After event callback")
-			payload, _, _, _ := store.Get(dataKey)
-			dLogger.WithFields(log.Fields{"key": dataKey, "event": e.GetTraceInfo(), "payload": payload, "timeRemain": timeRemain}).Info("Fetch data for delayed event")
+			payload, exists, ttl, err := store.Get(dataKey)
+			dLogger.WithFields(log.Fields{"key": dataKey, "event": e.GetTraceInfo(), "payload": payload, "key_exists": exists, "ttl": ttl, "err": err}).Info("Fetch data for delayed event")
 			event := models.IncomingEvent{}
 			json.Unmarshal([]byte(payload), &event)
 			d.sendEvent(event, dest, store, documentStore)
