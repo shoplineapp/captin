@@ -96,6 +96,7 @@ func (d *Dispatcher) Dispatch(
 			responses <- 0
 			d.processDelayedEvent(e, timeRemain, destination, store, documentStore)
 		} else {
+			dLogger.WithFields(log.Fields{"event": e.GetTraceInfo(), "destination": destination}).Debug("Cannot trigger send event")
 			responses <- 0
 		}
 	}
@@ -206,6 +207,10 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 	dataKey := getEventDataKey(store, e, dest)
 	storedData, dataExists, _, storeErr := store.Get(dataKey)
 	if storeErr != nil {
+		dLogger.WithFields(log.Fields{
+			"event":        e.GetTraceInfo(),
+			"eventDataKey": dataKey,
+		}).Error("Get stored data error: ", storeErr)
 		panic(storeErr)
 	}
 
@@ -230,6 +235,10 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		queueKey := getEventThrottledPayloadsKey(store, e, dest)
 		jsonString, jsonErr := json.Marshal(customizedPayload)
 		if jsonErr != nil {
+			dLogger.WithFields(log.Fields{
+				"queueKey": queueKey,
+				"event":    e.GetTraceInfo(),
+			}).Error("Marshal throttled payload error")
 			panic(jsonErr)
 		}
 		dLogger.WithFields(log.Fields{
@@ -245,6 +254,10 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		queueKey := getEventThrottledDocumentsKey(store, e, dest)
 		jsonString, jsonErr := json.Marshal(customizedDocument)
 		if jsonErr != nil {
+			dLogger.WithFields(log.Fields{
+				"queueKey": queueKey,
+				"event":    e.GetTraceInfo(),
+			}).Error("Marshal throttled document error")
 			panic(jsonErr)
 		}
 		dLogger.WithFields(log.Fields{
@@ -257,6 +270,10 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 
 	jsonString, jsonErr := json.Marshal(e)
 	if jsonErr != nil {
+		dLogger.WithFields(log.Fields{
+			"event":          e.GetTraceInfo(),
+			"enqueuePayload": jsonString,
+		}).Error("Marshal event error")
 		panic(jsonErr)
 	}
 
@@ -264,6 +281,10 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		// Update Value
 		_, updateErr := store.Update(dataKey, string(jsonString))
 		if updateErr != nil {
+			dLogger.WithFields(log.Fields{
+				"event":   e.GetTraceInfo(),
+				"dataKey": dataKey,
+			}).Error("Update payload error: ", updateErr)
 			panic(updateErr)
 		}
 	} else {
@@ -272,6 +293,10 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		dLogger.WithFields(log.Fields{"key": dataKey, "event": e.GetTraceInfo(), "payload": string(jsonString)}).Info("Store data for delayed event")
 		_, saveErr := store.Set(dataKey, string(jsonString), config.GetThrottleValue()*2)
 		if saveErr != nil {
+			dLogger.WithFields(log.Fields{
+				"event":   e.GetTraceInfo(),
+				"dataKey": dataKey,
+			}).Error("Save config error: ", saveErr)
 			panic(saveErr)
 		}
 
@@ -388,6 +413,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	_sendEvent := func() {
 		defer func() {
 			if err := recover(); err != nil {
+				callbackLogger.Error(fmt.Sprintf("Dispatcher Error: %s", err))
 				d.Errors = append(d.Errors, &captin_errors.DispatcherError{
 					Msg:         fmt.Sprintf("%+v", err),
 					Destination: destination,
@@ -399,6 +425,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 
 		err := sender.SendEvent(evt, destination)
 		if err != nil {
+			callbackLogger.Error(fmt.Sprintf("Send event failed, %s", err))
 			panic(err)
 			return
 		}
