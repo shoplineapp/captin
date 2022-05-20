@@ -206,6 +206,12 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 	// Check if store have payload
 	dataKey := getEventDataKey(store, e, dest)
 	storedData, dataExists, _, storeErr := store.Get(dataKey)
+
+	dLogger.WithFields(log.Fields{
+		"event":        e.GetTraceInfo(),
+		"eventDataKey": dataKey,
+	}).Info("Data exists: " + strconv.FormatBool(dataExists) + ", stored data: " + storedData)
+
 	if storeErr != nil {
 		dLogger.WithFields(log.Fields{
 			"event":        e.GetTraceInfo(),
