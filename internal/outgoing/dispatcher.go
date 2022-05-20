@@ -96,7 +96,7 @@ func (d *Dispatcher) Dispatch(
 			responses <- 0
 			d.processDelayedEvent(e, timeRemain, destination, store, documentStore)
 		} else {
-			dLogger.WithFields(log.Fields{"event": e.GetTraceInfo(), "destination": destination}).Debug("Cannot trigger send event")
+			dLogger.WithFields(log.Fields{"event": e.GetTraceInfo(), "destination": destination}).Info("Cannot trigger send event")
 			responses <- 0
 		}
 	}
