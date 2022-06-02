@@ -45,7 +45,7 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 	}
 	c := Captin{
 		Status: STATUS_READY,
-		ConfigMap: configMap.(models.ConfigurationMapper),
+		ConfigMap: configMap,
 		filters: []destination_filters.DestinationFilterInterface{
 			destination_filters.ValidateFilter{},
 			destination_filters.SourceFilter{},
