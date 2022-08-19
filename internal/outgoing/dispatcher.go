@@ -6,12 +6,13 @@ import (
 	"strconv"
 	"time"
 
+	destination_filters "github.com/shoplineapp/captin/destinations/filters"
 	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
-	destination_filters "github.com/shoplineapp/captin/destinations/filters"
-	models "github.com/shoplineapp/captin/models"
 	documentStores "github.com/shoplineapp/captin/internal/document_stores"
 	helpers "github.com/shoplineapp/captin/internal/helpers"
+	"github.com/shoplineapp/captin/internal/sl_time"
+	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -62,6 +63,22 @@ func (d *Dispatcher) SetDelayer(delayer interfaces.DispatchDelayerInterface) {
 	d.delayer = delayer
 }
 
+func (d *Dispatcher) OnError(evt interfaces.IncomingEventInterface, err interfaces.ErrorInterface) {
+
+	d.Errors = append(d.Errors, err)
+	switch dispatcherErr := err.(type) {
+	case *captin_errors.DispatcherError:
+		dLogger.WithFields(log.Fields{
+			"event":       dispatcherErr.Event,
+			"destination": dispatcherErr.Destination,
+			"reason":      dispatcherErr.Error(),
+		}).Error("Failed to dispatch event")
+		d.TriggerErrorHandler(dispatcherErr)
+	default:
+		dLogger.WithFields(log.Fields{"event": evt, "error": err}).Error("Unhandled error on dispatcher")
+	}
+}
+
 // Dispatch - Dispatch an event to outgoing webhook
 func (d *Dispatcher) Dispatch(
 	event interfaces.IncomingEventInterface,
@@ -93,9 +110,12 @@ func (d *Dispatcher) Dispatch(
 				responses <- 1
 			}(e, destination, documentStore)
 		} else if !config.GetThrottleTrailingDisabled() {
-			responses <- 0
-			d.processDelayedEvent(e, timeRemain, destination, store, documentStore)
+			go func(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
+				d.processDelayedEvent(e, timeRemain, destination, store, documentStore)
+				responses <- 1
+			}(e, destination, documentStore)
 		} else {
+			dLogger.WithFields(log.Fields{"event": e.GetTraceInfo(), "destination": destination}).Info("Cannot trigger send event")
 			responses <- 0
 		}
 	}
@@ -180,7 +200,7 @@ func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination mode
 	}
 }
 
-func (d *Dispatcher) customizePayload(e models.IncomingEvent, destination interfaces.DestinationInterface) map[string]interface{}  {
+func (d *Dispatcher) customizePayload(e models.IncomingEvent, destination interfaces.DestinationInterface) map[string]interface{} {
 	config := destination.(models.Destination).Config
 	if len(config.GetIncludePayloadAttrs()) >= 1 {
 		return helpers.IncludeFields(e.Payload, config.GetIncludePayloadAttrs()).(map[string]interface{})
@@ -194,7 +214,7 @@ func (d *Dispatcher) customizePayload(e models.IncomingEvent, destination interf
 func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
 	defer func() {
 		if err := recover(); err != nil {
-			d.Errors = append(d.Errors, &captin_errors.DispatcherError{
+			d.OnError(e, &captin_errors.DispatcherError{
 				Msg:         err.(error).Error(),
 				Destination: dest,
 				Event:       e,
@@ -233,8 +253,8 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 			panic(jsonErr)
 		}
 		dLogger.WithFields(log.Fields{
-			"queueKey":  queueKey,
-			"event":        e.GetTraceInfo(),
+			"queueKey":       queueKey,
+			"event":          e.GetTraceInfo(),
 			"enqueuePayload": jsonString,
 		}).Debug("Storing throttled payload")
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
@@ -248,8 +268,8 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 			panic(jsonErr)
 		}
 		dLogger.WithFields(log.Fields{
-			"queueKey":  queueKey,
-			"event":        e.GetTraceInfo(),
+			"queueKey":        queueKey,
+			"event":           e.GetTraceInfo(),
 			"enqueueDocument": jsonString,
 		}).Debug("Storing throttled document")
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
@@ -275,7 +295,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		}
 
 		// Schedule send event later
-		time.AfterFunc(timeRemain, func() {
+		sl_time.AfterFunc(timeRemain, func() {
 			dLogger.WithFields(log.Fields{"key": dataKey}).Debug("After event callback")
 			payload, _, _, _ := store.Get(dataKey)
 			event := models.IncomingEvent{}
@@ -340,8 +360,8 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	defer func() {
 		if err := recover(); err != nil {
 			callbackLogger.Info(fmt.Sprintf("Event failed sending to %s [%s]", config.GetName(), destination.GetCallbackURL()))
-			d.Errors = append(d.Errors, &captin_errors.DispatcherError{
-				Msg:         fmt.Sprintf("%+v", err),
+			d.OnError(evt, &captin_errors.DispatcherError{
+				Msg:         err.(error).Error(),
 				Destination: destination,
 				Event:       evt,
 			})
@@ -385,8 +405,8 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	_sendEvent := func() {
 		defer func() {
 			if err := recover(); err != nil {
-				d.Errors = append(d.Errors, &captin_errors.DispatcherError{
-					Msg:         fmt.Sprintf("%+v", err),
+				d.OnError(evt, &captin_errors.DispatcherError{
+					Msg:         err.(error).Error(),
 					Destination: destination,
 					Event:       evt,
 				})

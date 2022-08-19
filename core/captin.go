@@ -143,20 +143,6 @@ func (c *Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfac
 	dispatcher.SetDelayer(c.dispatchDelayer)
 	dispatcher.Dispatch(e, c.store, c.throttler, c.DocumentStoreMapping)
 
-	for _, err := range dispatcher.Errors {
-		switch dispatcherErr := err.(type) {
-		case *captin_errors.DispatcherError:
-			cLogger.WithFields(log.Fields{
-				"event":       dispatcherErr.Event,
-				"destination": dispatcherErr.Destination,
-				"reason":      dispatcherErr.Error(),
-			}).Error("Failed to dispatch event")
-			dispatcher.TriggerErrorHandler(dispatcherErr)
-		default:
-			cLogger.WithFields(log.Fields{"error": e}).Error("Unhandled error on dispatcher")
-		}
-	}
-
 	cLogger.Debug(fmt.Sprintf("Captin event executed, %d destinations, %d failed", len(destinations), len(dispatcher.Errors)))
 
 	c.Status = STATUS_READY
