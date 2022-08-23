@@ -6,6 +6,7 @@ import (
 	destination_filters "github.com/shoplineapp/captin/destinations/filters"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
+	"github.com/shoplineapp/captin/internal/sl_time"
 	models "github.com/shoplineapp/captin/models"
 	senders "github.com/shoplineapp/captin/senders"
 
@@ -112,6 +113,10 @@ func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSende
 
 func (c Captin) IsRunning() bool {
 	return c.Status == STATUS_RUNNING
+}
+
+func (c Captin) PendingJobCount() int64 {
+	return sl_time.PendingJobCount()
 }
 
 // Execute - Execute for events

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	core "github.com/shoplineapp/captin/core"
-	"github.com/shoplineapp/captin/internal/sl_time"
 	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
@@ -48,7 +47,7 @@ func main() {
 	log.Println("Gracefully shutting down...")
 	for {
 		time.Sleep(1 * time.Second)
-		if captin.IsRunning() != true && sl_time.PendingJobCount() == 0 {
+		if captin.IsRunning() != true {
 			log.Println("Tasks released")
 			break
 		}
