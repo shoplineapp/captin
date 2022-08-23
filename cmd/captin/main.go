@@ -1,13 +1,14 @@
 package main
 
 import (
-	"time"
 	"os"
 	"os/signal"
-	"syscall"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	core "github.com/shoplineapp/captin/core"
+	"github.com/shoplineapp/captin/internal/sl_time"
 	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
@@ -47,7 +48,7 @@ func main() {
 	log.Println("Gracefully shutting down...")
 	for {
 		time.Sleep(1 * time.Second)
-		if captin.IsRunning() != true {
+		if captin.IsRunning() != true && sl_time.PendingJobCount() == 0 {
 			log.Println("Tasks released")
 			break
 		}
