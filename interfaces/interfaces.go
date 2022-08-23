@@ -8,6 +8,7 @@ import (
 type CaptinInterface interface {
 	Execute(e IncomingEventInterface) (bool, []ErrorInterface)
 	IsRunning() bool
+	PendingJobCount() int64
 }
 
 // EventSenderInterface - Event Sender Interface

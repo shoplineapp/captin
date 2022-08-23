@@ -2,9 +2,11 @@ package core
 
 import (
 	"fmt"
+
 	destination_filters "github.com/shoplineapp/captin/destinations/filters"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
+	"github.com/shoplineapp/captin/internal/sl_time"
 	models "github.com/shoplineapp/captin/models"
 	senders "github.com/shoplineapp/captin/senders"
 
@@ -26,7 +28,7 @@ type Captin struct {
 	ConfigMap            interfaces.ConfigMapperInterface
 	filters              []destination_filters.DestinationFilterInterface
 	middlewares          []destination_filters.DestinationMiddlewareInterface
-	dispatchFilters	     []destination_filters.DestinationFilterInterface
+	dispatchFilters      []destination_filters.DestinationFilterInterface
 	dispatchMiddlewares  []destination_filters.DestinationMiddlewareInterface
 	dispatchErrorHandler interfaces.ErrorHandlerInterface
 	dispatchDelayer      interfaces.DispatchDelayerInterface
@@ -44,7 +46,7 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 		"beanstalkd": &senders.BeanstalkdSender{},
 	}
 	c := Captin{
-		Status: STATUS_READY,
+		Status:    STATUS_READY,
 		ConfigMap: configMap,
 		filters: []destination_filters.DestinationFilterInterface{
 			destination_filters.ValidateFilter{},
@@ -111,6 +113,10 @@ func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSende
 
 func (c Captin) IsRunning() bool {
 	return c.Status == STATUS_RUNNING
+}
+
+func (c Captin) PendingJobCount() int64 {
+	return sl_time.PendingJobCount()
 }
 
 // Execute - Execute for events
