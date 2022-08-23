@@ -101,9 +101,9 @@ func (ms *MemoryStore) Enqueue(key string, value string, ttl time.Duration) (boo
 	_, ok := ms.m[key]
 	if !ok {
 		ms.m[key] = &item{
-			value: []string{},
+			value:      []string{},
 			createDate: time.Now(),
-			ttl: ttl,
+			ttl:        ttl,
 		}
 	}
 	it := ms.m[key]
@@ -126,6 +126,9 @@ func (ms *MemoryStore) GetQueue(key string) ([]string, bool, time.Duration, erro
 
 // Len - Get memory size
 func (ms *MemoryStore) Len() int {
+	ms.lock.Lock()
+	defer ms.lock.Unlock()
+
 	return len(ms.m)
 }
 

@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
+	destination_filters "github.com/shoplineapp/captin/destinations/filters"
 	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
-	destination_filters "github.com/shoplineapp/captin/destinations/filters"
-	models "github.com/shoplineapp/captin/models"
 	documentStores "github.com/shoplineapp/captin/internal/document_stores"
 	helpers "github.com/shoplineapp/captin/internal/helpers"
+	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -28,6 +29,9 @@ type Dispatcher struct {
 	middlewares    []destination_filters.DestinationMiddlewareInterface
 	errorHandler   interfaces.ErrorHandlerInterface
 	delayer        interfaces.DispatchDelayerInterface
+
+	muTargetDocument sync.Mutex
+	muErrors         sync.Mutex
 }
 
 // NewDispatcherWithDestinations - Create Outgoing event dispatcher with destinations
@@ -60,6 +64,18 @@ func (d *Dispatcher) SetErrorHandler(handler interfaces.ErrorHandlerInterface) {
 
 func (d *Dispatcher) SetDelayer(delayer interfaces.DispatchDelayerInterface) {
 	d.delayer = delayer
+}
+
+func (d *Dispatcher) GetErrors() []interfaces.ErrorInterface {
+	d.muErrors.Lock()
+	defer d.muErrors.Unlock()
+	return d.Errors
+}
+
+func (d *Dispatcher) CreateError(err interfaces.ErrorInterface) {
+	d.muErrors.Lock()
+	defer d.muErrors.Unlock()
+	d.Errors = append(d.Errors, err)
 }
 
 // Dispatch - Dispatch an event to outgoing webhook
@@ -106,7 +122,7 @@ func (d *Dispatcher) Dispatch(
 	return nil
 }
 
-func (d Dispatcher) TriggerErrorHandler(err *captin_errors.DispatcherError) {
+func (d *Dispatcher) TriggerErrorHandler(err *captin_errors.DispatcherError) {
 	if d.errorHandler != nil {
 		go d.errorHandler.Exec(*err)
 	}
@@ -114,7 +130,7 @@ func (d Dispatcher) TriggerErrorHandler(err *captin_errors.DispatcherError) {
 
 // Private Functions
 
-func (d Dispatcher) getDocumentStore(dest models.Destination, documentStoreMappings map[string]interfaces.DocumentStoreInterface) interfaces.DocumentStoreInterface {
+func (d *Dispatcher) getDocumentStore(dest models.Destination, documentStoreMappings map[string]interfaces.DocumentStoreInterface) interfaces.DocumentStoreInterface {
 	if documentStoreMappings[dest.GetDocumentStore()] != nil {
 		return documentStoreMappings[dest.GetDocumentStore()]
 	}
@@ -166,6 +182,9 @@ func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination mode
 		return e.TargetDocument
 	}
 
+	d.muTargetDocument.Lock()
+	defer d.muTargetDocument.Unlock()
+
 	// memoize document to be used across events for diff. destinations
 	if d.targetDocument == nil {
 		d.targetDocument = documentStore.GetDocument(*e)
@@ -180,7 +199,7 @@ func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination mode
 	}
 }
 
-func (d *Dispatcher) customizePayload(e models.IncomingEvent, destination interfaces.DestinationInterface) map[string]interface{}  {
+func (d *Dispatcher) customizePayload(e models.IncomingEvent, destination interfaces.DestinationInterface) map[string]interface{} {
 	config := destination.(models.Destination).Config
 	if len(config.GetIncludePayloadAttrs()) >= 1 {
 		return helpers.IncludeFields(e.Payload, config.GetIncludePayloadAttrs()).(map[string]interface{})
@@ -194,7 +213,7 @@ func (d *Dispatcher) customizePayload(e models.IncomingEvent, destination interf
 func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
 	defer func() {
 		if err := recover(); err != nil {
-			d.Errors = append(d.Errors, &captin_errors.DispatcherError{
+			d.CreateError(&captin_errors.DispatcherError{
 				Msg:         err.(error).Error(),
 				Destination: dest,
 				Event:       e,
@@ -233,8 +252,8 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 			panic(jsonErr)
 		}
 		dLogger.WithFields(log.Fields{
-			"queueKey":  queueKey,
-			"event":        e.GetTraceInfo(),
+			"queueKey":       queueKey,
+			"event":          e.GetTraceInfo(),
 			"enqueuePayload": jsonString,
 		}).Debug("Storing throttled payload")
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
@@ -248,8 +267,8 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 			panic(jsonErr)
 		}
 		dLogger.WithFields(log.Fields{
-			"queueKey":  queueKey,
-			"event":        e.GetTraceInfo(),
+			"queueKey":        queueKey,
+			"event":           e.GetTraceInfo(),
 			"enqueueDocument": jsonString,
 		}).Debug("Storing throttled document")
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
@@ -340,7 +359,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	defer func() {
 		if err := recover(); err != nil {
 			callbackLogger.Info(fmt.Sprintf("Event failed sending to %s [%s]", config.GetName(), destination.GetCallbackURL()))
-			d.Errors = append(d.Errors, &captin_errors.DispatcherError{
+			d.CreateError(&captin_errors.DispatcherError{
 				Msg:         fmt.Sprintf("%+v", err),
 				Destination: destination,
 				Event:       evt,
@@ -378,14 +397,13 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 			Destination: destination,
 			Event:       evt,
 		})
-		return
 	}
 
 	// Wrap event sender and error handling as closure for reusing in delayer
 	_sendEvent := func() {
 		defer func() {
 			if err := recover(); err != nil {
-				d.Errors = append(d.Errors, &captin_errors.DispatcherError{
+				d.CreateError(&captin_errors.DispatcherError{
 					Msg:         fmt.Sprintf("%+v", err),
 					Destination: destination,
 					Event:       evt,
@@ -393,11 +411,9 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 			}
 			return
 		}()
-
 		err := sender.SendEvent(evt, destination)
 		if err != nil {
 			panic(err)
-			return
 		}
 		callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", config.GetName(), destination.GetCallbackURL()))
 	}

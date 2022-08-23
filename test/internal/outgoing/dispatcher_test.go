@@ -3,11 +3,11 @@ package outgoing_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"reflect"
 	"testing"
 	"time"
-	"fmt"
 	"unsafe"
 
 	"github.com/stretchr/testify/assert"
@@ -80,10 +80,8 @@ func TestDispatchEvents_Error(t *testing.T) {
 		TargetId:   "product_id_2",
 	}, store, throttler, documentStores)
 
-	time.Sleep(50 * time.Millisecond)
-
 	sender.AssertNumberOfCalls(t, "SendEvent", 6)
-	assert.Equal(t, 6, len(dispatcher.Errors))
+	assert.Equal(t, 6, len(dispatcher.GetErrors()))
 }
 
 func TestDispatchEvents_SendEvent_WithNotDispatcherError(t *testing.T) {
@@ -110,10 +108,8 @@ func TestDispatchEvents_SendEvent_WithNotDispatcherError(t *testing.T) {
 		TargetId:   "product_id_2",
 	}, store, throttler, documentStores)
 
-	time.Sleep(50 * time.Millisecond)
-
 	sender.AssertNumberOfCalls(t, "SendEvent", 6)
-	assert.Equal(t, 6, len(dispatcher.Errors))
+	assert.Equal(t, 6, len(dispatcher.GetErrors()))
 }
 
 func TestDispatchEvents(t *testing.T) {
@@ -139,8 +135,6 @@ func TestDispatchEvents(t *testing.T) {
 		TargetType: "Product",
 		TargetId:   "product_id_2",
 	}, store, throttler, documentStores)
-
-	time.Sleep(50 * time.Millisecond)
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 6)
 }
@@ -434,8 +428,6 @@ func TestDispatchEvents_With_Document(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	time.Sleep(50 * time.Millisecond)
-
 	sender.AssertExpectations(t)
 }
 
@@ -460,8 +452,6 @@ func TestDispatchEvents_With_Include_Document_Attrs(t *testing.T) {
 		TargetType: "Product",
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
-
-	time.Sleep(50 * time.Millisecond)
 
 	sender.AssertExpectations(t)
 }
@@ -488,8 +478,6 @@ func TestDispatchEvents_With_Exclude_Document_Attrs(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	time.Sleep(50 * time.Millisecond)
-
 	sender.AssertExpectations(t)
 }
 
@@ -512,8 +500,6 @@ func TestDispatchEvents_With_Include_Payload_Attrs(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	time.Sleep(50 * time.Millisecond)
-
 	sender.AssertExpectations(t)
 }
 
@@ -535,8 +521,6 @@ func TestDispatchEvents_With_Exclude_Payload_Attrs(t *testing.T) {
 		TargetType: "Product",
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
-
-	time.Sleep(50 * time.Millisecond)
 
 	sender.AssertExpectations(t)
 }
@@ -565,7 +549,6 @@ func TestDispatchEvents_WithSpecificDocumentStore(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	time.Sleep(50 * time.Millisecond)
 	sender.AssertExpectations(t)
 }
 

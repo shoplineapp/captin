@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+
 	destination_filters "github.com/shoplineapp/captin/destinations/filters"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
@@ -26,7 +27,7 @@ type Captin struct {
 	ConfigMap            interfaces.ConfigMapperInterface
 	filters              []destination_filters.DestinationFilterInterface
 	middlewares          []destination_filters.DestinationMiddlewareInterface
-	dispatchFilters	     []destination_filters.DestinationFilterInterface
+	dispatchFilters      []destination_filters.DestinationFilterInterface
 	dispatchMiddlewares  []destination_filters.DestinationMiddlewareInterface
 	dispatchErrorHandler interfaces.ErrorHandlerInterface
 	dispatchDelayer      interfaces.DispatchDelayerInterface
@@ -44,7 +45,7 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 		"beanstalkd": &senders.BeanstalkdSender{},
 	}
 	c := Captin{
-		Status: STATUS_READY,
+		Status:    STATUS_READY,
 		ConfigMap: configMap,
 		filters: []destination_filters.DestinationFilterInterface{
 			destination_filters.ValidateFilter{},
@@ -143,7 +144,8 @@ func (c *Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfac
 	dispatcher.SetDelayer(c.dispatchDelayer)
 	dispatcher.Dispatch(e, c.store, c.throttler, c.DocumentStoreMapping)
 
-	for _, err := range dispatcher.Errors {
+	errors := dispatcher.GetErrors()
+	for _, err := range errors {
 		switch dispatcherErr := err.(type) {
 		case *captin_errors.DispatcherError:
 			cLogger.WithFields(log.Fields{
@@ -157,8 +159,8 @@ func (c *Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfac
 		}
 	}
 
-	cLogger.Debug(fmt.Sprintf("Captin event executed, %d destinations, %d failed", len(destinations), len(dispatcher.Errors)))
+	cLogger.Debug(fmt.Sprintf("Captin event executed, %d destinations, %d failed", len(destinations), len(errors)))
 
 	c.Status = STATUS_READY
-	return true, dispatcher.Errors
+	return true, errors
 }
