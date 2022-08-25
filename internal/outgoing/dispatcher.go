@@ -8,11 +8,11 @@ import (
 	"time"
 
 	destination_filters "github.com/shoplineapp/captin/destinations/filters"
+	"github.com/shoplineapp/captin/dispatcher"
 	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	documentStores "github.com/shoplineapp/captin/internal/document_stores"
 	helpers "github.com/shoplineapp/captin/internal/helpers"
-	"github.com/shoplineapp/captin/internal/sl_time"
 	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
@@ -310,7 +310,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		}
 
 		// Schedule send event later
-		sl_time.AfterFunc(timeRemain, func() {
+		dispatcher.TrackAfterFuncJob(timeRemain, func() {
 			dLogger.WithFields(log.Fields{"key": dataKey}).Debug("After event callback")
 			payload, _, _, _ := store.Get(dataKey)
 			event := models.IncomingEvent{}
