@@ -112,7 +112,7 @@ func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSende
 }
 
 func (c Captin) IsRunning() bool {
-	return c.Status == STATUS_RUNNING && dispatcher.PendingJobCount() > 0
+	return c.Status == STATUS_RUNNING || dispatcher.PendingJobCount() > 0
 }
 
 // Execute - Execute for events
