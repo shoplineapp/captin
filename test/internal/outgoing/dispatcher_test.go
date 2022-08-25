@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	delayers "github.com/shoplineapp/captin/dispatcher/delayers"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	stores "github.com/shoplineapp/captin/internal/stores"
@@ -167,6 +168,29 @@ func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 1)
 	store.AssertCalled(t, "Remove", throttleID)
+}
+
+func TestDispatchEvents_Delayer_Send(t *testing.T) {
+	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.delay.json")
+	dispatcher.SetDelayer(&delayers.GoroutineDelayer{})
+	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 1*time.Millisecond, nil)
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	store.On("Remove", mock.Anything).Return(true, nil)
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 1},
+		TargetType: "Product",
+		TargetId:   "product_id",
+		Control:    map[string]interface{}{"existing_data": "test"},
+	}, store, throttler, documentStores)
+
+	time.Sleep(100 * time.Millisecond)
+
+	sender.AssertNumberOfCalls(t, "SendEvent", 2)
 }
 
 func TestDispatchEvents_Throttled_SkipUpdatingValue(t *testing.T) {
