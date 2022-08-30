@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mohae/deepcopy"
 	destination_filters "github.com/shoplineapp/captin/destinations/filters"
 	"github.com/shoplineapp/captin/dispatcher"
 	captin_errors "github.com/shoplineapp/captin/errors"
@@ -132,7 +133,7 @@ func (d *Dispatcher) Dispatch(
 		}
 	}
 	// Wait for destination completion
-	for _, _ = range d.destinations {
+	for range d.destinations {
 		<-responses
 	}
 	return nil
@@ -427,7 +428,9 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 			}
 			return
 		}()
-		err := sender.SendEvent(evt, destination)
+		// Deep clone a new instance to prevent concurrent iteration and write on json.Marshal
+		event := deepcopy.Copy(evt).(models.IncomingEvent)
+		err := sender.SendEvent(event, destination)
 		if err != nil {
 			panic(err)
 		}
@@ -438,7 +441,9 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		// Sending message with delay in goroutine, no error will be caught
 		callbackLogger.Info(fmt.Sprintf("Event requires delay"))
 		if d.delayer != nil {
-			d.delayer.Execute(evt, destination, _sendEvent)
+			// Delayer will usually modify event.Control for delay info, deep clone to prevent concurrent write
+			event := deepcopy.Copy(evt).(models.IncomingEvent)
+			d.delayer.Execute(event, destination, _sendEvent)
 			return
 		} else {
 			callbackLogger.Warn(fmt.Sprintf("Delayer not found, send event immediately"))
