@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	destination_filters "github.com/shoplineapp/captin/destinations/filters"
-	"github.com/shoplineapp/captin/dispatcher"
+	d "github.com/shoplineapp/captin/dispatcher"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	models "github.com/shoplineapp/captin/models"
@@ -112,7 +112,7 @@ func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSende
 }
 
 func (c Captin) IsRunning() bool {
-	return c.Status == STATUS_RUNNING || dispatcher.PendingJobCount() > 0
+	return c.Status == STATUS_RUNNING || d.PendingJobCount() > 0
 }
 
 // Execute - Execute for events
@@ -147,7 +147,7 @@ func (c *Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfac
 
 	errors := dispatcher.GetErrors()
 
-	cLogger.Debug(fmt.Sprintf("Captin event executed, %d destinations, %d failed", len(destinations), len(errors)))
+	cLogger.Debug(fmt.Sprintf("Captin event executed, %d destinations, %d failed, %d pending", len(destinations), len(errors), d.PendingJobCount()))
 
 	c.Status = STATUS_READY
 	return true, errors
