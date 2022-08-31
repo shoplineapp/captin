@@ -141,7 +141,9 @@ func (d *Dispatcher) Dispatch(
 
 func (d *Dispatcher) TriggerErrorHandler(err *captin_errors.DispatcherError) {
 	if d.errorHandler != nil {
-		go d.errorHandler.Exec(*err)
+		dispatcher.TrackGoRoutine(func() {
+			d.errorHandler.Exec(*err)
+		})
 	}
 }
 

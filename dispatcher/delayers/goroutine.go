@@ -32,7 +32,7 @@ func (d GoroutineDelayer) Execute(evt interfaces.IncomingEventInterface, dest in
 
 	eventLogger.Debug("Event delayed by GoroutineDelayer")
 	ch := make(chan int, 1)
-	go dispatcher.TrackAfterFuncJob(config.GetDelayValue(), func() {
+	dispatcher.TrackAfterFuncJob(config.GetDelayValue(), func() {
 		eventLogger.Info("Event resumed")
 		exec()
 		ch <- 1
