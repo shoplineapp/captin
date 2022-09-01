@@ -8,7 +8,7 @@ import (
 var pendingJobCount int64 = 0
 
 func PendingJobCount() int64 {
-	return pendingJobCount
+	return atomic.LoadInt64(&pendingJobCount)
 }
 
 func TrackAfterFuncJob(d time.Duration, f func()) {
