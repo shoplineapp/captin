@@ -3,15 +3,16 @@ package outgoing_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"reflect"
 	"testing"
 	"time"
-	"fmt"
 	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
+	delayers "github.com/shoplineapp/captin/dispatcher/delayers"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	stores "github.com/shoplineapp/captin/internal/stores"
@@ -80,10 +81,8 @@ func TestDispatchEvents_Error(t *testing.T) {
 		TargetId:   "product_id_2",
 	}, store, throttler, documentStores)
 
-	time.Sleep(50 * time.Millisecond)
-
 	sender.AssertNumberOfCalls(t, "SendEvent", 6)
-	assert.Equal(t, 6, len(dispatcher.Errors))
+	assert.Equal(t, 6, len(dispatcher.GetErrors()))
 }
 
 func TestDispatchEvents_SendEvent_WithNotDispatcherError(t *testing.T) {
@@ -110,10 +109,8 @@ func TestDispatchEvents_SendEvent_WithNotDispatcherError(t *testing.T) {
 		TargetId:   "product_id_2",
 	}, store, throttler, documentStores)
 
-	time.Sleep(50 * time.Millisecond)
-
 	sender.AssertNumberOfCalls(t, "SendEvent", 6)
-	assert.Equal(t, 6, len(dispatcher.Errors))
+	assert.Equal(t, 6, len(dispatcher.GetErrors()))
 }
 
 func TestDispatchEvents(t *testing.T) {
@@ -139,8 +136,6 @@ func TestDispatchEvents(t *testing.T) {
 		TargetType: "Product",
 		TargetId:   "product_id_2",
 	}, store, throttler, documentStores)
-
-	time.Sleep(50 * time.Millisecond)
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 6)
 }
@@ -173,6 +168,29 @@ func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 1)
 	store.AssertCalled(t, "Remove", throttleID)
+}
+
+func TestDispatchEvents_Delayer_Send(t *testing.T) {
+	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.delay.json")
+	dispatcher.SetDelayer(&delayers.GoroutineDelayer{})
+	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 1*time.Millisecond, nil)
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	store.On("Remove", mock.Anything).Return(true, nil)
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 1},
+		TargetType: "Product",
+		TargetId:   "product_id",
+		Control:    map[string]interface{}{"existing_data": "test"},
+	}, store, throttler, documentStores)
+
+	time.Sleep(100 * time.Millisecond)
+
+	sender.AssertNumberOfCalls(t, "SendEvent", 2)
 }
 
 func TestDispatchEvents_Throttled_SkipUpdatingValue(t *testing.T) {
@@ -434,8 +452,6 @@ func TestDispatchEvents_With_Document(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	time.Sleep(50 * time.Millisecond)
-
 	sender.AssertExpectations(t)
 }
 
@@ -460,8 +476,6 @@ func TestDispatchEvents_With_Include_Document_Attrs(t *testing.T) {
 		TargetType: "Product",
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
-
-	time.Sleep(50 * time.Millisecond)
 
 	sender.AssertExpectations(t)
 }
@@ -488,8 +502,6 @@ func TestDispatchEvents_With_Exclude_Document_Attrs(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	time.Sleep(50 * time.Millisecond)
-
 	sender.AssertExpectations(t)
 }
 
@@ -512,8 +524,6 @@ func TestDispatchEvents_With_Include_Payload_Attrs(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	time.Sleep(50 * time.Millisecond)
-
 	sender.AssertExpectations(t)
 }
 
@@ -535,8 +545,6 @@ func TestDispatchEvents_With_Exclude_Payload_Attrs(t *testing.T) {
 		TargetType: "Product",
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
-
-	time.Sleep(50 * time.Millisecond)
 
 	sender.AssertExpectations(t)
 }
@@ -565,7 +573,6 @@ func TestDispatchEvents_WithSpecificDocumentStore(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	time.Sleep(50 * time.Millisecond)
 	sender.AssertExpectations(t)
 }
 
@@ -606,4 +613,45 @@ func TestDispatchEvents_Throttled_Without_TrailingEdge(t *testing.T) {
 
 	time.Sleep(1000 * time.Millisecond)
 	sender.AssertNumberOfCalls(t, "SendEvent", 1)
+}
+
+func TestDispatchEvents_OnError(t *testing.T) {
+
+	_, _, _, dispatcher, _ := setup("fixtures/config.single.json")
+
+	dispatcher.OnError(
+		models.IncomingEvent{
+			Key:        "product.update",
+			Source:     "core",
+			Payload:    map[string]interface{}{"field1": 1},
+			TargetType: "Product",
+			TargetId:   "product_id",
+		}, errors.New("error"),
+	)
+
+	assert.Equal(t, 1, len(dispatcher.Errors))
+}
+
+func TestDispatchEvents_DispatchErrorTriggerOnError(t *testing.T) {
+
+	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.single.json")
+
+	sender.On("SendEvent", mock.Anything, mock.Anything).Return(errors.New("Mock Error"))
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 1},
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStores)
+
+	time.Sleep(50 * time.Millisecond)
+
+	sender.AssertExpectations(t)
+	// error is only append to errors list when OnError is called
+	assert.Equal(t, 1, len(dispatcher.Errors))
 }

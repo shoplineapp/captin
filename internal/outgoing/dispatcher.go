@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
+	"github.com/mohae/deepcopy"
 	destination_filters "github.com/shoplineapp/captin/destinations/filters"
+	"github.com/shoplineapp/captin/dispatcher"
 	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	documentStores "github.com/shoplineapp/captin/internal/document_stores"
@@ -28,6 +31,9 @@ type Dispatcher struct {
 	middlewares    []destination_filters.DestinationMiddlewareInterface
 	errorHandler   interfaces.ErrorHandlerInterface
 	delayer        interfaces.DispatchDelayerInterface
+
+	muTargetDocument sync.Mutex
+	muErrors         sync.Mutex
 }
 
 // NewDispatcherWithDestinations - Create Outgoing event dispatcher with destinations
@@ -62,6 +68,30 @@ func (d *Dispatcher) SetDelayer(delayer interfaces.DispatchDelayerInterface) {
 	d.delayer = delayer
 }
 
+func (d *Dispatcher) GetErrors() []interfaces.ErrorInterface {
+	d.muErrors.Lock()
+	defer d.muErrors.Unlock()
+	return d.Errors
+}
+
+func (d *Dispatcher) OnError(evt interfaces.IncomingEventInterface, err interfaces.ErrorInterface) {
+	d.muErrors.Lock()
+	defer d.muErrors.Unlock()
+	d.Errors = append(d.Errors, err)
+
+	switch dispatcherErr := err.(type) {
+	case *captin_errors.DispatcherError:
+		dLogger.WithFields(log.Fields{
+			"event":       dispatcherErr.Event,
+			"destination": dispatcherErr.Destination,
+			"reason":      dispatcherErr.Error(),
+		}).Error("Failed to dispatch event")
+		d.TriggerErrorHandler(dispatcherErr)
+	default:
+		dLogger.WithFields(log.Fields{"event": evt, "error": err}).Error("Unhandled error on dispatcher")
+	}
+}
+
 // Dispatch - Dispatch an event to outgoing webhook
 func (d *Dispatcher) Dispatch(
 	event interfaces.IncomingEventInterface,
@@ -93,29 +123,33 @@ func (d *Dispatcher) Dispatch(
 				responses <- 1
 			}(e, destination, documentStore)
 		} else if !config.GetThrottleTrailingDisabled() {
-			responses <- 0
-			d.processDelayedEvent(e, timeRemain, destination, store, documentStore)
+			go func(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
+				d.processDelayedEvent(e, timeRemain, destination, store, documentStore)
+				responses <- 1
+			}(e, destination, documentStore)
 		} else {
 			dLogger.WithFields(log.Fields{"event": e.GetTraceInfo(), "destination": destination}).Info("Cannot trigger send event")
 			responses <- 0
 		}
 	}
 	// Wait for destination completion
-	for _, _ = range d.destinations {
+	for range d.destinations {
 		<-responses
 	}
 	return nil
 }
 
-func (d Dispatcher) TriggerErrorHandler(err *captin_errors.DispatcherError) {
+func (d *Dispatcher) TriggerErrorHandler(err *captin_errors.DispatcherError) {
 	if d.errorHandler != nil {
-		go d.errorHandler.Exec(*err)
+		dispatcher.TrackGoRoutine(func() {
+			d.errorHandler.Exec(*err)
+		})
 	}
 }
 
 // Private Functions
 
-func (d Dispatcher) getDocumentStore(dest models.Destination, documentStoreMappings map[string]interfaces.DocumentStoreInterface) interfaces.DocumentStoreInterface {
+func (d *Dispatcher) getDocumentStore(dest models.Destination, documentStoreMappings map[string]interfaces.DocumentStoreInterface) interfaces.DocumentStoreInterface {
 	if documentStoreMappings[dest.GetDocumentStore()] != nil {
 		return documentStoreMappings[dest.GetDocumentStore()]
 	}
@@ -167,6 +201,9 @@ func (d *Dispatcher) customizeDocument(e *models.IncomingEvent, destination mode
 		return e.TargetDocument
 	}
 
+	d.muTargetDocument.Lock()
+	defer d.muTargetDocument.Unlock()
+
 	// memoize document to be used across events for diff. destinations
 	if d.targetDocument == nil {
 		d.targetDocument = documentStore.GetDocument(*e)
@@ -195,7 +232,7 @@ func (d *Dispatcher) customizePayload(e models.IncomingEvent, destination interf
 func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
 	defer func() {
 		if err := recover(); err != nil {
-			d.Errors = append(d.Errors, &captin_errors.DispatcherError{
+			d.OnError(e, &captin_errors.DispatcherError{
 				Msg:         err.(error).Error(),
 				Destination: dest,
 				Event:       e,
@@ -308,7 +345,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 
 		// Schedule send event later
 		dLogger.WithFields(log.Fields{"key": dataKey, "event": e.GetTraceInfo(), "timeRemain": timeRemain}).Info("AfterFunc")
-		time.AfterFunc(timeRemain, func() {
+		dispatcher.TrackAfterFuncJob(timeRemain, func() {
 			dLogger.WithFields(log.Fields{"key": dataKey}).Debug("After event callback")
 			payload, exists, ttl, err := store.Get(dataKey)
 			dLogger.WithFields(log.Fields{"key": dataKey, "event": e.GetTraceInfo(), "payload": payload, "key_exists": exists, "ttl": ttl, "err": err}).Info("Fetch data for delayed event")
@@ -374,8 +411,8 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	defer func() {
 		if err := recover(); err != nil {
 			callbackLogger.Info(fmt.Sprintf("Event failed sending to %s [%s]", config.GetName(), destination.GetCallbackURL()))
-			d.Errors = append(d.Errors, &captin_errors.DispatcherError{
-				Msg:         fmt.Sprintf("%+v", err),
+			d.OnError(evt, &captin_errors.DispatcherError{
+				Msg:         err.(error).Error(),
 				Destination: destination,
 				Event:       evt,
 			})
@@ -412,7 +449,6 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 			Destination: destination,
 			Event:       evt,
 		})
-		return
 	}
 
 	// Wrap event sender and error handling as closure for reusing in delayer
@@ -420,20 +456,20 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		defer func() {
 			if err := recover(); err != nil {
 				callbackLogger.Error(fmt.Sprintf("Dispatcher Error: %s", err))
-				d.Errors = append(d.Errors, &captin_errors.DispatcherError{
-					Msg:         fmt.Sprintf("%+v", err),
+				d.OnError(evt, &captin_errors.DispatcherError{
+					Msg:         err.(error).Error(),
 					Destination: destination,
 					Event:       evt,
 				})
 			}
 			return
 		}()
-
-		err := sender.SendEvent(evt, destination)
+		// Deep clone a new instance to prevent concurrent iteration and write on json.Marshal
+		event := deepcopy.Copy(evt).(models.IncomingEvent)
+		err := sender.SendEvent(event, destination)
 		if err != nil {
 			callbackLogger.Error(fmt.Sprintf("Send event failed, %s", err))
 			panic(err)
-			return
 		}
 		callbackLogger.Info(fmt.Sprintf("Event successfully sent to %s [%s]", config.GetName(), destination.GetCallbackURL()))
 	}
@@ -442,7 +478,9 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 		// Sending message with delay in goroutine, no error will be caught
 		callbackLogger.Info(fmt.Sprintf("Event requires delay"))
 		if d.delayer != nil {
-			d.delayer.Execute(evt, destination, _sendEvent)
+			// Delayer will usually modify event.Control for delay info, deep clone to prevent concurrent write
+			event := deepcopy.Copy(evt).(models.IncomingEvent)
+			d.delayer.Execute(event, destination, _sendEvent)
 			return
 		} else {
 			callbackLogger.Warn(fmt.Sprintf("Delayer not found, send event immediately"))

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "callback_url": "https://postman-echo.com/post",
+    "actions": [
+      "product.update"
+    ],
+    "source": "core-api",
+    "name": "service_one",
+    "delay": "5ms",
+    "include_document": false,
+    "sender": "mock"
+  },
+  {
+    "id": "2",
+    "callback_url": "https://postman-echo.com/post2",
+    "actions": [
+      "product.update"
+    ],
+    "source": "core-api",
+    "name": "service_two",
+    "delay": "5ms",
+    "include_document": false,
+    "sender": "mock"
+  }
+]

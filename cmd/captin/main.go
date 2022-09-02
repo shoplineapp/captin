@@ -1,11 +1,11 @@
 package main
 
 import (
-	"time"
 	"os"
 	"os/signal"
-	"syscall"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	core "github.com/shoplineapp/captin/core"
 	models "github.com/shoplineapp/captin/models"

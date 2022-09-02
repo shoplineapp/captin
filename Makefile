@@ -11,7 +11,7 @@ build:
 	@go build -o build/captin cmd/captin/main.go
 
 test:
-	@go test $(shell go list ./test/... | grep -v mocks)
+	@go test -parallel 4 -race $(shell go list ./test/... | grep -v mocks)
 
 run-example:
 	@./build/captin ./example/config.json

@@ -2,7 +2,9 @@ package core
 
 import (
 	"fmt"
+
 	destination_filters "github.com/shoplineapp/captin/destinations/filters"
+	d "github.com/shoplineapp/captin/dispatcher"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	models "github.com/shoplineapp/captin/models"
@@ -26,7 +28,7 @@ type Captin struct {
 	ConfigMap            interfaces.ConfigMapperInterface
 	filters              []destination_filters.DestinationFilterInterface
 	middlewares          []destination_filters.DestinationMiddlewareInterface
-	dispatchFilters	     []destination_filters.DestinationFilterInterface
+	dispatchFilters      []destination_filters.DestinationFilterInterface
 	dispatchMiddlewares  []destination_filters.DestinationMiddlewareInterface
 	dispatchErrorHandler interfaces.ErrorHandlerInterface
 	dispatchDelayer      interfaces.DispatchDelayerInterface
@@ -44,8 +46,8 @@ func NewCaptin(configMap interfaces.ConfigMapperInterface) *Captin {
 		"beanstalkd": &senders.BeanstalkdSender{},
 	}
 	c := Captin{
-		Status: STATUS_READY,
-		ConfigMap: configMap.(models.ConfigurationMapper),
+		Status:    STATUS_READY,
+		ConfigMap: configMap,
 		filters: []destination_filters.DestinationFilterInterface{
 			destination_filters.ValidateFilter{},
 			destination_filters.SourceFilter{},
@@ -110,7 +112,7 @@ func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSende
 }
 
 func (c Captin) IsRunning() bool {
-	return c.Status == STATUS_RUNNING
+	return c.Status == STATUS_RUNNING || d.PendingJobCount() > 0
 }
 
 // Execute - Execute for events
@@ -143,22 +145,10 @@ func (c *Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfac
 	dispatcher.SetDelayer(c.dispatchDelayer)
 	dispatcher.Dispatch(e, c.store, c.throttler, c.DocumentStoreMapping)
 
-	for _, err := range dispatcher.Errors {
-		switch dispatcherErr := err.(type) {
-		case *captin_errors.DispatcherError:
-			cLogger.WithFields(log.Fields{
-				"event":       dispatcherErr.Event,
-				"destination": dispatcherErr.Destination,
-				"reason":      dispatcherErr.Error(),
-			}).Error("Failed to dispatch event")
-			dispatcher.TriggerErrorHandler(dispatcherErr)
-		default:
-			cLogger.WithFields(log.Fields{"error": e}).Error("Unhandled error on dispatcher")
-		}
-	}
+	errors := dispatcher.GetErrors()
 
-	cLogger.Debug(fmt.Sprintf("Captin event executed, %d destinations, %d failed", len(destinations), len(dispatcher.Errors)))
+	cLogger.Debug(fmt.Sprintf("Captin event executed, %d destinations, %d failed, %d pending", len(destinations), len(errors), d.PendingJobCount()))
 
 	c.Status = STATUS_READY
-	return true, dispatcher.Errors
+	return true, errors
 }
