@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	destination_filters "github.com/shoplineapp/captin/destinations/filters"
+	d "github.com/shoplineapp/captin/dispatcher"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	models "github.com/shoplineapp/captin/models"
@@ -111,7 +112,7 @@ func (c *Captin) SetSenderMapping(senderMapping map[string]interfaces.EventSende
 }
 
 func (c Captin) IsRunning() bool {
-	return c.Status == STATUS_RUNNING
+	return c.Status == STATUS_RUNNING || d.PendingJobCount() > 0
 }
 
 // Execute - Execute for events
@@ -145,21 +146,8 @@ func (c *Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfac
 	dispatcher.Dispatch(e, c.store, c.throttler, c.DocumentStoreMapping)
 
 	errors := dispatcher.GetErrors()
-	for _, err := range errors {
-		switch dispatcherErr := err.(type) {
-		case *captin_errors.DispatcherError:
-			cLogger.WithFields(log.Fields{
-				"event":       dispatcherErr.Event,
-				"destination": dispatcherErr.Destination,
-				"reason":      dispatcherErr.Error(),
-			}).Error("Failed to dispatch event")
-			dispatcher.TriggerErrorHandler(dispatcherErr)
-		default:
-			cLogger.WithFields(log.Fields{"error": e}).Error("Unhandled error on dispatcher")
-		}
-	}
 
-	cLogger.Debug(fmt.Sprintf("Captin event executed, %d destinations, %d failed", len(destinations), len(errors)))
+	cLogger.Debug(fmt.Sprintf("Captin event executed, %d destinations, %d failed, %d pending", len(destinations), len(errors), d.PendingJobCount()))
 
 	c.Status = STATUS_READY
 	return true, errors

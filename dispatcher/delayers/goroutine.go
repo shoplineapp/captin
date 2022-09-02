@@ -2,9 +2,11 @@ package dispatcher_delayers
 
 import (
 	"fmt"
+
 	"time"
 
-	interfaces "github.com/shoplineapp/captin/interfaces"
+	"github.com/shoplineapp/captin/dispatcher"
+	"github.com/shoplineapp/captin/interfaces"
 	"github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
@@ -28,10 +30,10 @@ func (d GoroutineDelayer) Execute(evt interfaces.IncomingEventInterface, dest in
 		"outstanding_delay_seconds": outstanding,
 	})
 
-	eventLogger.Debug(fmt.Sprintf("Event delayed by GoroutineDelayer"))
+	eventLogger.Debug("Event delayed by GoroutineDelayer")
 	ch := make(chan int, 1)
-	go time.AfterFunc(config.GetDelayValue(), func() {
-		eventLogger.Info(fmt.Sprintf("Event resumed"))
+	dispatcher.TrackAfterFuncJob(config.GetDelayValue(), func() {
+		eventLogger.Info("Event resumed")
 		exec()
 		ch <- 1
 	})

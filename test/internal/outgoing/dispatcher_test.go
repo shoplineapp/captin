@@ -614,3 +614,44 @@ func TestDispatchEvents_Throttled_Without_TrailingEdge(t *testing.T) {
 	time.Sleep(1000 * time.Millisecond)
 	sender.AssertNumberOfCalls(t, "SendEvent", 1)
 }
+
+func TestDispatchEvents_OnError(t *testing.T) {
+
+	_, _, _, dispatcher, _ := setup("fixtures/config.single.json")
+
+	dispatcher.OnError(
+		models.IncomingEvent{
+			Key:        "product.update",
+			Source:     "core",
+			Payload:    map[string]interface{}{"field1": 1},
+			TargetType: "Product",
+			TargetId:   "product_id",
+		}, errors.New("error"),
+	)
+
+	assert.Equal(t, 1, len(dispatcher.Errors))
+}
+
+func TestDispatchEvents_DispatchErrorTriggerOnError(t *testing.T) {
+
+	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.single.json")
+
+	sender.On("SendEvent", mock.Anything, mock.Anything).Return(errors.New("Mock Error"))
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core",
+		Payload:    map[string]interface{}{"field1": 1},
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStores)
+
+	time.Sleep(50 * time.Millisecond)
+
+	sender.AssertExpectations(t)
+	// error is only append to errors list when OnError is called
+	assert.Equal(t, 1, len(dispatcher.Errors))
+}
