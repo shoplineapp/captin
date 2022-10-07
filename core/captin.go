@@ -133,7 +133,7 @@ func (c *Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfac
 
 	destinations = outgoing.Custom{}.Sift(&e, destinations, c.filters, c.middlewares)
 	cLogger.WithFields(log.Fields{
-		"event":        e,
+		"event":        e.GetTraceInfo(),
 		"destinations": destinations,
 	}).Info("Ready to dispatch event with destinations")
 

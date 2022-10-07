@@ -51,7 +51,7 @@ func (s *SqsSender) SendEvent(ev interfaces.IncomingEventInterface, dv interface
 	})
 
 	if err != nil {
-		sLogger.WithFields(log.Fields{"error": err, "event": e, "destination": d}).Error("Failed to send event with SQS")
+		sLogger.WithFields(log.Fields{"error": err, "event": e.GetTraceInfo(), "destination": d}).Error("Failed to send event with SQS")
 	}
 
 	return err

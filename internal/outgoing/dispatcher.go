@@ -88,7 +88,7 @@ func (d *Dispatcher) OnError(evt interfaces.IncomingEventInterface, err interfac
 		}).Error("Failed to dispatch event")
 		d.TriggerErrorHandler(dispatcherErr)
 	default:
-		dLogger.WithFields(log.Fields{"event": evt, "error": err}).Error("Unhandled error on dispatcher")
+		dLogger.WithFields(log.Fields{"event": evt.GetTraceInfo(), "error": err}).Error("Unhandled error on dispatcher")
 	}
 }
 
