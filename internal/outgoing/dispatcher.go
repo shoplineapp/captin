@@ -82,7 +82,7 @@ func (d *Dispatcher) OnError(evt interfaces.IncomingEventInterface, err interfac
 	switch dispatcherErr := err.(type) {
 	case *captin_errors.DispatcherError:
 		dLogger.WithFields(log.Fields{
-			"event":       dispatcherErr.Event,
+			"event":       dispatcherErr.Event.GetTraceInfo(),
 			"destination": dispatcherErr.Destination,
 			"reason":      dispatcherErr.Error(),
 		}).Error("Failed to dispatch event")
@@ -293,7 +293,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
 	}
 
-	jsonString, jsonErr := json.Marshal(e)
+	jsonString, jsonErr := e.ToJson()
 	if jsonErr != nil {
 		panic(jsonErr)
 	}

@@ -1,8 +1,6 @@
 package senders
 
 import (
-	"encoding/json"
-
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
@@ -39,7 +37,7 @@ func (s *SqsSender) SendEvent(ev interfaces.IncomingEventInterface, dv interface
 	queueURL := d.GetCallbackURL()
 	sLogger.WithFields(log.Fields{"queueURL": queueURL}).Debug("Send sqs event")
 
-	payload, jsonErr := json.Marshal(e)
+	payload, jsonErr := e.ToJson()
 	if jsonErr != nil {
 		sLogger.WithFields(log.Fields{"error": jsonErr}).Error("Failed to convert incoming event to json payload")
 		return jsonErr
