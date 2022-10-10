@@ -3,7 +3,6 @@ package senders
 import (
 	"bytes"
 	"crypto/tls"
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 
@@ -32,7 +31,7 @@ func (c *HTTPEventSender) SendEvent(ev interfaces.IncomingEventInterface, dv int
 	d := dv.(models.Destination)
 
 	url := d.GetCallbackURL()
-	payload, err := json.Marshal(e)
+	payload, err := e.ToJson()
 
 	if err != nil {
 		return err

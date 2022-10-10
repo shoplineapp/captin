@@ -293,7 +293,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
 	}
 
-	jsonString, jsonErr := json.Marshal(e)
+	jsonString, jsonErr := e.ToJson()
 	if jsonErr != nil {
 		panic(jsonErr)
 	}
