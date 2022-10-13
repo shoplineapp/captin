@@ -56,13 +56,13 @@ func TestIsValid(t *testing.T) {
 func TestMarshalJSON(t *testing.T) {
 	e := IncomingEvent{Key: "product.update", Source: "core", Payload: map[string]interface{}{"payload": "data"}, TargetType: "product", TargetId: "xxxxx", Control: map[string]interface{}{"extra": "extra", "ts": 99999999999999, "host": "host", "ip_addresses": "ip_addresses"}, TargetDocument: map[string]interface{}{"payload": "data"}}
 	val, _ := e.MarshalJSON()
-	assert.Equal(t, `{"control":{"host":"host","ip_addresses":"ip_addresses","ts":99999999999999},"event_key":"product.update","source":"core","target_id":"xxxxx","target_type":"product","trace_id":""}`, string(val))
+	assert.Equal(t, `{"control":{"host":"host","ip_addresses":"ip_addresses","ts":99999999999999},"id":"xxxxx","key":"product.update","source":"core","trace_id":"","type":"product"}`, string(val))
 }
 
 func TestString(t *testing.T) {
 	e := IncomingEvent{Key: "product.update", Source: "core", Payload: map[string]interface{}{"payload": "data"}, TargetType: "product", TargetId: "xxxxx", Control: map[string]interface{}{"extra": "extra", "ts": 99999999999999, "host": "host", "ip_addresses": "ip_addresses"}, TargetDocument: map[string]interface{}{"payload": "data"}}
 	val := e.String()
-	assert.Equal(t, `{"control":{"host":"host","ip_addresses":"ip_addresses","ts":99999999999999},"event_key":"product.update","source":"core","target_id":"xxxxx","target_type":"product","trace_id":""}`, val)
+	assert.Equal(t, `{"control":{"host":"host","ip_addresses":"ip_addresses","ts":99999999999999},"id":"xxxxx","key":"product.update","source":"core","trace_id":"","type":"product"}`, val)
 }
 
 func TestToMap(t *testing.T) {

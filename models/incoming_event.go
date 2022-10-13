@@ -87,13 +87,8 @@ func (e IncomingEvent) String() string {
 
 // default to exclude certain fields to reduce size of the resulted json, to get full payload, use ToJson
 func (e IncomingEvent) MarshalJSON() ([]byte, error) {
-	val := e.ToMap()
-	delete(val, "payload")
-	delete(val, "throttled_payloads")
-	delete(val, "target_document")
-	delete(val, "throttled_documents")
+	val := e.GetTraceInfo()
 
-	val["control"] = nil
 	if e.Control != nil {
 		val["control"] = map[string]interface{}{
 			"ts":           e.Control["ts"],
