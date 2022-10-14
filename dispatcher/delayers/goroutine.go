@@ -23,7 +23,7 @@ func (d GoroutineDelayer) Execute(evt interfaces.IncomingEventInterface, dest in
 
 	delay, outstanding := d.GetDelayAndOutstandingSeconds(event, dest.(models.Destination))
 	eventLogger := dLogger.WithFields(log.Fields{
-		"event":                     event.GetTraceInfo(),
+		"event":                     event,
 		"hook_name":                 config.GetName(),
 		"hook_delay":                config.GetDelayValue(),
 		"event_delay":               delay,

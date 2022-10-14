@@ -1,8 +1,8 @@
 package outgoing
 
 import (
-	models "github.com/shoplineapp/captin/models"
 	destination_filters "github.com/shoplineapp/captin/destinations/filters"
+	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -13,7 +13,7 @@ type Custom struct{}
 // Sift - Custom check will filter ineligible destination
 func (c Custom) Sift(e *models.IncomingEvent, destinations []models.Destination, filters []destination_filters.DestinationFilterInterface, middlewares []destination_filters.DestinationMiddlewareInterface) []models.Destination {
 	cLogger.WithFields(log.Fields{
-		"event":        e.GetTraceInfo(),
+		"event":        e,
 		"destinations": destinations,
 		"filters":      filters,
 		"middlewares":  middlewares,

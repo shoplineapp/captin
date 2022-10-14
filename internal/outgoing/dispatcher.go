@@ -107,7 +107,7 @@ func (d *Dispatcher) Dispatch(
 		documentStore := d.getDocumentStore(destination, documentStoreMappings)
 
 		if err != nil {
-			dLogger.WithFields(log.Fields{"event": e.GetTraceInfo(), "destination": destination, "error": err}).Error("Error on getting throttle key")
+			dLogger.WithFields(log.Fields{"event": e, "destination": destination, "error": err}).Error("Error on getting throttle key")
 
 			// Send without throttling
 			go func(e models.IncomingEvent, destination models.Destination, documentStore interfaces.DocumentStoreInterface) {
@@ -128,7 +128,7 @@ func (d *Dispatcher) Dispatch(
 				responses <- 1
 			}(e, destination, documentStore)
 		} else {
-			dLogger.WithFields(log.Fields{"event": e.GetTraceInfo(), "destination": destination}).Info("Cannot trigger send event")
+			dLogger.WithFields(log.Fields{"event": e, "destination": destination}).Info("Cannot trigger send event")
 			responses <- 0
 		}
 	}
@@ -257,7 +257,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		// Skip updating event data as stored data has newer timestamp
 		dLogger.WithFields(log.Fields{
 			"storedEvent":  storedEvent,
-			"event":        e.GetTraceInfo(),
+			"event":        e,
 			"eventDataKey": "dataKey",
 		}).Debug("Skipping update on event data")
 		return
@@ -272,7 +272,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		}
 		dLogger.WithFields(log.Fields{
 			"queueKey":       queueKey,
-			"event":          e.GetTraceInfo(),
+			"event":          e,
 			"enqueuePayload": jsonString,
 		}).Debug("Storing throttled payload")
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
@@ -287,7 +287,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		}
 		dLogger.WithFields(log.Fields{
 			"queueKey":        queueKey,
-			"event":           e.GetTraceInfo(),
+			"event":           e,
 			"enqueueDocument": jsonString,
 		}).Debug("Storing throttled document")
 		store.Enqueue(queueKey, string(jsonString), dest.Config.GetThrottleValue()*2)
@@ -369,7 +369,7 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	config := destination.Config
 	callbackLogger := dLogger.WithFields(log.Fields{
 		"action":         evt.Key,
-		"event":          evt.GetTraceInfo(),
+		"event":          evt,
 		"hook_name":      config.GetName(),
 		"callback_url":   destination.GetCallbackURL(),
 		"document_store": destination.GetDocumentStore(),
