@@ -1,9 +1,12 @@
 package models
 
 import (
-	"time"
-	"strconv"
 	"encoding/json"
+	"reflect"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/google/uuid"
 
 	interfaces "github.com/shoplineapp/captin/interfaces"
@@ -12,18 +15,18 @@ import (
 type IncomingEvent struct {
 	interfaces.IncomingEventInterface
 
-	TraceId string
-	Key     string                 `json:"event_key"` // Required, The identifier of an event, usually form as PREFIX.MODEL.ACTION
-	Source  string                 `json:"source"`    // Required, Event source from
-	Payload map[string]interface{} `json:"payload"`   // Optional, custom payload / document from caller
-	ThrottledPayloads []map[string]interface{} `json:"throttled_payloads,omitempty"`   // for response only
-	Control map[string]interface{} `json:"control"`   // Optional, custom control values from caller
+	TraceId           string                   `json:"trace_id"`
+	Key               string                   `json:"event_key"`                    // Required, The identifier of an event, usually form as PREFIX.MODEL.ACTION
+	Source            string                   `json:"source"`                       // Required, Event source from
+	Payload           map[string]interface{}   `json:"payload"`                      // Optional, custom payload / document from caller
+	ThrottledPayloads []map[string]interface{} `json:"throttled_payloads,omitempty"` // for response only
+	Control           map[string]interface{}   `json:"control"`                      // Optional, custom control values from caller
 
 	// Optional with payload, Captin will try to fetch the document from the default database
-	TargetType     string                 `json:"target_type"`
-	TargetId       string                 `json:"target_id"`
-	TargetDocument map[string]interface{} `json:"target_document,omitempty"`
-	ThrottledDocuments []map[string]interface{} `json:"throttled_documents,omitempty"`   // for response only
+	TargetType         string                   `json:"target_type"`
+	TargetId           string                   `json:"target_id"`
+	TargetDocument     map[string]interface{}   `json:"target_document,omitempty"`
+	ThrottledDocuments []map[string]interface{} `json:"throttled_documents,omitempty"` // for response only
 }
 
 func NewIncomingEvent(data []byte) IncomingEvent {
@@ -40,10 +43,10 @@ func NewIncomingEvent(data []byte) IncomingEvent {
 func (e IncomingEvent) GetTraceInfo() map[string]interface{} {
 	return map[string]interface{}{
 		"trace_id": e.TraceId,
-		"key":     e.Key,
-		"source":  e.Source,
-		"type":    e.TargetType,
-		"id":      e.TargetId,
+		"key":      e.Key,
+		"source":   e.Source,
+		"type":     e.TargetType,
+		"id":       e.TargetId,
 	}
 }
 
@@ -72,4 +75,59 @@ func (e IncomingEvent) IsValid() bool {
 		return false
 	}
 	return true
+}
+
+func (e IncomingEvent) String() string {
+	val, err := e.MarshalJSON()
+	if err != nil {
+		panic(err)
+	}
+	return string(val)
+}
+
+// default to exclude certain fields to reduce size of the resulted json, to get full payload, use ToJson
+func (e IncomingEvent) MarshalJSON() ([]byte, error) {
+	val := e.GetTraceInfo()
+
+	if e.Control != nil {
+		val["control"] = map[string]interface{}{
+			"ts":           e.Control["ts"],
+			"host":         e.Control["host"],
+			"ip_addresses": e.Control["ip_addresses"],
+		}
+	}
+
+	return json.Marshal(val)
+}
+
+func (e IncomingEvent) ToJson() ([]byte, error) {
+	return json.Marshal(e.ToMap())
+}
+
+func (e IncomingEvent) ToMap() map[string]interface{} {
+	out := make(map[string]interface{})
+
+	v := reflect.ValueOf(e)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	t := v.Type()
+	for i := 0; i < v.NumField(); i++ {
+		fi := t.Field(i)
+		if tagValue := fi.Tag.Get("json"); tagValue != "" {
+			parts := strings.Split(tagValue, ",")
+			if parts[0] == "-" || parts[0] == "" {
+				continue
+			}
+			if len(parts) > 1 && parts[1] == "omitempty" {
+				if v.Field(i).IsZero() {
+					continue
+				}
+			}
+			out[parts[0]] = v.Field(i).Interface()
+		}
+	}
+
+	return out
 }

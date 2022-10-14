@@ -162,7 +162,7 @@ func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
 	throttleID := "product.update.service_one.product_id-data"
 	throttlePeriod := time.Millisecond * 500 * 2
 	store.AssertCalled(t, "Get", throttleID)
-	store.AssertCalled(t, "Set", throttleID, `{"IncomingEventInterface":null,"TraceId":"","event_key":"product.update","source":"core","payload":{"field1":1},"control":null,"target_type":"Product","target_id":"product_id"}`, throttlePeriod)
+	store.AssertCalled(t, "Set", throttleID, `{"control":null,"event_key":"product.update","payload":{"field1":1},"source":"core","target_id":"product_id","target_type":"Product","trace_id":""}`, throttlePeriod)
 
 	time.Sleep(600 * time.Millisecond)
 
@@ -241,7 +241,7 @@ func TestDispatchEvents_Throttled_UpdatePayload(t *testing.T) {
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
 	store.AssertCalled(t, "Get", throttleID)
-	store.AssertCalled(t, "Update", throttleID, `{"IncomingEventInterface":null,"TraceId":"","event_key":"product.update","source":"core","payload":{"field1":2},"control":null,"target_type":"Product","target_id":"product_id"}`)
+	store.AssertCalled(t, "Update", throttleID, `{"control":null,"event_key":"product.update","payload":{"field1":2},"source":"core","target_id":"product_id","target_type":"Product","trace_id":""}`)
 }
 
 func TestDispatchEvents_Throttled_KeepThrottledPayloads(t *testing.T) {

@@ -1,8 +1,6 @@
 package senders
 
 import (
-	"encoding/json"
-
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
@@ -19,14 +17,14 @@ var sLogger = log.WithFields(log.Fields{"class": "SqsSender"})
 // SqsSender - Send Event to AWS SQS
 type SqsSender struct {
 	interfaces.EventSenderInterface
-	DefaultClient aws_sqsiface.SQSAPI
+	DefaultClient        aws_sqsiface.SQSAPI
 	DestinationClientMap map[string]aws_sqsiface.SQSAPI
 }
 
 func NewSqsSender(defaultAwsConfig aws.Config) *SqsSender {
 	defaultSession := aws_session.Must(aws_session.NewSession(&defaultAwsConfig))
 	return &SqsSender{
-		DefaultClient: aws_sqs.New(defaultSession),
+		DefaultClient:        aws_sqs.New(defaultSession),
 		DestinationClientMap: map[string]aws_sqsiface.SQSAPI{},
 	}
 }
@@ -39,7 +37,7 @@ func (s *SqsSender) SendEvent(ev interfaces.IncomingEventInterface, dv interface
 	queueURL := d.GetCallbackURL()
 	sLogger.WithFields(log.Fields{"queueURL": queueURL}).Debug("Send sqs event")
 
-	payload, jsonErr := json.Marshal(e)
+	payload, jsonErr := e.ToJson()
 	if jsonErr != nil {
 		sLogger.WithFields(log.Fields{"error": jsonErr}).Error("Failed to convert incoming event to json payload")
 		return jsonErr
