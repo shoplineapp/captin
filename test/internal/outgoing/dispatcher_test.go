@@ -650,11 +650,11 @@ func TestDispatchEvents_DispatchErrorTriggerOnError(t *testing.T) {
 
 	sender.AssertExpectations(t)
 	// error is only append to errors list when OnError is called
-	assert.Equal(t, 1, len(dispatcher.Errors))
+	assert.Equal(t, 1, len(dispatcher.GetErrors()))
 }
 
 func TestDispatchEvents_DelaySend_NotExist(t *testing.T) {
-	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.json")
+	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.single.json")
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
 	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
@@ -663,13 +663,15 @@ func TestDispatchEvents_DelaySend_NotExist(t *testing.T) {
 
 	dispatcher.Dispatch(models.IncomingEvent{
 		Key:        "product.update",
-		Source:     "core",
+		Source:     "core-api",
 		Payload:    map[string]interface{}{"field1": 1},
 		TargetType: "Product",
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	assert.Equal(t, 1, len(dispatcher.Errors))
-	assert.IsType(t, &captin_errors.UnretryableError{}, dispatcher.Errors[0])
+	time.Sleep(50 * time.Millisecond)
+
+	assert.Equal(t, 1, len(dispatcher.GetErrors()))
+	assert.IsType(t, &captin_errors.UnretryableError{}, dispatcher.GetErrors()[0])
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
 }
