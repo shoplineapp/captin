@@ -315,11 +315,21 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 		// Schedule send event later
 		dispatcher.TrackAfterFuncJob(timeRemain, func() {
 			dLogger.WithFields(log.Fields{"key": dataKey}).Debug("After event callback")
-			payload, _, _, _ := store.Get(dataKey)
+			payload, exists, _, _ := store.Get(dataKey)
+			// Key might be deleted by another worker, resulting in data not found
+			if !exists {
+				dLogger.WithFields(log.Fields{"key": dataKey}).Debug("Event data not found")
+				d.OnError(models.IncomingEvent{}, &captin_errors.UnretryableError{Msg: "Event data not found", Event: e, Destination: dest})
+				return
+			}
 			event := models.IncomingEvent{}
 			json.Unmarshal([]byte(payload), &event)
 			d.sendEvent(event, dest, store, documentStore)
-			store.Remove(dataKey)
+
+			/* This line is commented out because their is a possibility of race condition,
+			when the dataKey is removed by one worker, another worker might try to access it,
+			it is better to let the dataKey expire by the ttl */
+			// store.Remove(dataKey)
 		})
 	}
 }
@@ -422,13 +432,20 @@ func (d *Dispatcher) sendEvent(evt models.IncomingEvent, destination models.Dest
 	_sendEvent := func() {
 		defer func() {
 			if err := recover(); err != nil {
-				d.OnError(evt, &captin_errors.DispatcherError{
-					Msg:         err.(error).Error(),
-					Destination: destination,
-					Event:       evt,
-				})
+				var newErr error
+				switch err := err.(type) {
+				// As the event is invalid, this error is raised so that the event is not retried
+				case *captin_errors.UnretryableError:
+					newErr = err
+				default:
+					newErr = &captin_errors.DispatcherError{
+						Msg:         err.(error).Error(),
+						Destination: destination,
+						Event:       evt,
+					}
+				}
+				d.OnError(evt, newErr)
 			}
-			return
 		}()
 		// Deep clone a new instance to prevent concurrent iteration and write on json.Marshal
 		event := deepcopy.Copy(evt).(models.IncomingEvent)
