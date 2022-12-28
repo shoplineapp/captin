@@ -146,6 +146,7 @@ func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
 	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil).Once()
 	store.On("Get", mock.Anything).Return("", true, time.Duration(0), nil)
 	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	store.On("Remove", mock.Anything).Return(true, nil)
 	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
 
 	dispatcher.Dispatch(models.IncomingEvent{
@@ -176,6 +177,7 @@ func TestDispatchEvents_Delayer_Send(t *testing.T) {
 	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil).Twice()
 	store.On("Get", mock.Anything).Return("", true, time.Duration(0), nil)
 	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	store.On("Remove", mock.Anything).Return(true, nil)
 
 	dispatcher.Dispatch(models.IncomingEvent{
 		Key:        "product.update",
@@ -275,7 +277,7 @@ func TestDispatchEvents_Throttled_KeepThrottledPayloads(t *testing.T) {
 
 	_, storedEventExists, _, _ := store.Get(throttleID)
 	throttledPayloads, _, _, _ = store.GetQueue(throttlePayloadsID)
-	assert.Equal(t, true, storedEventExists)
+	assert.Equal(t, false, storedEventExists)
 	assert.Equal(t, 0, len(throttledPayloads))
 }
 
@@ -328,7 +330,7 @@ func TestDispatchEvents_Throttled_KeepThrottledPayloads_Multiple(t *testing.T) {
 	// it should clean up after sendEvent
 	_, storedEventExists, _, _ := store.Get(throttleID)
 	throttledPayloads, _, _, _ = store.GetQueue(throttlePayloadsID)
-	assert.Equal(t, true, storedEventExists)
+	assert.Equal(t, false, storedEventExists)
 	assert.Equal(t, 0, len(throttledPayloads))
 }
 
@@ -369,7 +371,7 @@ func TestDispatchEvents_Throttled_KeepThrottledDocuments(t *testing.T) {
 	// it should clean up after sendEvent
 	_, storedEventExists, _, _ := store.Get(throttleID)
 	throttledDocuments, _, _, _ = store.GetQueue(throttleDocumentsID)
-	assert.Equal(t, true, storedEventExists)
+	assert.Equal(t, false, storedEventExists)
 	assert.Equal(t, 0, len(throttledDocuments))
 }
 
@@ -424,7 +426,7 @@ func TestDispatchEvents_Throttled_KeepThrottledDocuments_Multiple(t *testing.T) 
 	// it should clean up after sendEvent
 	_, storedEventExists, _, _ := store.Get(throttleID)
 	throttledDocuments, _, _, _ = store.GetQueue(throttleDocumentsID)
-	assert.Equal(t, true, storedEventExists)
+	assert.Equal(t, false, storedEventExists)
 	assert.Equal(t, 0, len(throttledDocuments))
 }
 

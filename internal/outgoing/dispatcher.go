@@ -325,11 +325,7 @@ func (d *Dispatcher) processDelayedEvent(e models.IncomingEvent, timeRemain time
 			event := models.IncomingEvent{}
 			json.Unmarshal([]byte(payload), &event)
 			d.sendEvent(event, dest, store, documentStore)
-
-			/* This line is commented out because their is a possibility of race condition,
-			when the dataKey is removed by one worker, another worker might try to access it,
-			it is better to let the dataKey expire by the ttl */
-			// store.Remove(dataKey)
+			store.Remove(dataKey)
 		})
 	}
 }
