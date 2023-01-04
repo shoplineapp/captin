@@ -5,6 +5,7 @@ import (
 	"time"
 
 	beanstalk "github.com/beanstalkd/go-beanstalk"
+	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
 	log "github.com/sirupsen/logrus"
@@ -20,6 +21,12 @@ type BeanstalkdSender struct {
 // SendEvent - #BeanstalkdSender SendEvent
 func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) error {
 	e := ev.(models.IncomingEvent)
+
+	if e.Control == nil {
+		bLogger.Error("Event control is empty")
+		return &captin_errors.UnretryableError{Msg: "Event control is empty", Event: e}
+	}
+
 	conn, err := beanstalk.Dial("tcp", e.Control["beanstalkd_host"].(string))
 	if err != nil {
 		bLogger.WithFields(log.Fields{

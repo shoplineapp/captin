@@ -10,15 +10,14 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/stretchr/testify/assert"
-
 	delayers "github.com/shoplineapp/captin/dispatcher/delayers"
+	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	outgoing "github.com/shoplineapp/captin/internal/outgoing"
 	stores "github.com/shoplineapp/captin/internal/stores"
 	models "github.com/shoplineapp/captin/models"
 	mocks "github.com/shoplineapp/captin/test/mocks"
-
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -144,7 +143,8 @@ func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
 	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.single.json")
 
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil).Once()
+	store.On("Get", mock.Anything).Return("", true, time.Duration(0), nil)
 	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 	store.On("Remove", mock.Anything).Return(true, nil)
 	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
@@ -167,7 +167,6 @@ func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
 	time.Sleep(600 * time.Millisecond)
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 1)
-	store.AssertCalled(t, "Remove", throttleID)
 }
 
 func TestDispatchEvents_Delayer_Send(t *testing.T) {
@@ -175,7 +174,8 @@ func TestDispatchEvents_Delayer_Send(t *testing.T) {
 	dispatcher.SetDelayer(&delayers.GoroutineDelayer{})
 	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
 	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 1*time.Millisecond, nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil).Twice()
+	store.On("Get", mock.Anything).Return("", true, time.Duration(0), nil)
 	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 	store.On("Remove", mock.Anything).Return(true, nil)
 
@@ -275,7 +275,6 @@ func TestDispatchEvents_Throttled_KeepThrottledPayloads(t *testing.T) {
 		})
 	}), mock.Anything)
 
-	// it should clean up after sendEvent
 	_, storedEventExists, _, _ := store.Get(throttleID)
 	throttledPayloads, _, _, _ = store.GetQueue(throttlePayloadsID)
 	assert.Equal(t, false, storedEventExists)
@@ -653,5 +652,28 @@ func TestDispatchEvents_DispatchErrorTriggerOnError(t *testing.T) {
 
 	sender.AssertExpectations(t)
 	// error is only append to errors list when OnError is called
-	assert.Equal(t, 1, len(dispatcher.Errors))
+	assert.Equal(t, 1, len(dispatcher.GetErrors()))
+}
+
+func TestDispatchEvents_DelaySend_NotExist(t *testing.T) {
+	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.single.json")
+
+	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
+	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, time.Duration(0), nil)
+
+	dispatcher.Dispatch(models.IncomingEvent{
+		Key:        "product.update",
+		Source:     "core-api",
+		Payload:    map[string]interface{}{"field1": 1},
+		TargetType: "Product",
+		TargetId:   "product_id",
+	}, store, throttler, documentStores)
+
+	time.Sleep(50 * time.Millisecond)
+
+	assert.Equal(t, 1, len(dispatcher.GetErrors()))
+	assert.IsType(t, &captin_errors.UnretryableError{}, dispatcher.GetErrors()[0])
+	sender.AssertNumberOfCalls(t, "SendEvent", 0)
 }
