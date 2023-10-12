@@ -2,9 +2,11 @@ package senders
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	beanstalk "github.com/beanstalkd/go-beanstalk"
+	statsd "github.com/joeycumines/statsd"
 	captin_errors "github.com/shoplineapp/captin/errors"
 	interfaces "github.com/shoplineapp/captin/interfaces"
 	models "github.com/shoplineapp/captin/models"
@@ -16,11 +18,13 @@ var bLogger = log.WithFields(log.Fields{"class": "BeanstalkdSender"})
 // BeanstalkdSender - Send Event to beanstalkd
 type BeanstalkdSender struct {
 	interfaces.EventSenderInterface
+	StatsdClient *statsd.Client
 }
 
 // SendEvent - #BeanstalkdSender SendEvent
 func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) error {
 	e := ev.(models.IncomingEvent)
+	d := dv.(models.Destination)
 
 	if e.Control == nil {
 		bLogger.Error("Event control is empty")
@@ -32,6 +36,9 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		bLogger.WithFields(log.Fields{
 			"error": err,
 		}).Error("Beanstalk create connection failed.")
+		if c.StatsdClient != nil {
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,msg=create_connection_failed", d.Config.GetName(), d.Config.GetName()))
+		}
 		return err
 	}
 
@@ -66,6 +73,9 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		bLogger.WithFields(log.Fields{
 			"error": err,
 		}).Error("Beanstalk client put job failed.")
+		if c.StatsdClient != nil {
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,msg=put_job_failed", d.Config.GetName(), d.Config.GetName()))
+		}
 		return err
 	}
 
