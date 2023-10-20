@@ -37,7 +37,7 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 			"error": err,
 		}).Error("Beanstalk create connection failed.")
 		if c.StatsdClient != nil {
-			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,msg=create_connection_failed", d.Config.GetName(), d.Config.GetName()))
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=CreateConnectionFailed", d.Config.GetName(), d.Config.GetName()))
 		}
 		return err
 	}
@@ -74,7 +74,7 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 			"error": err,
 		}).Error("Beanstalk client put job failed.")
 		if c.StatsdClient != nil {
-			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,msg=put_job_failed", d.Config.GetName(), d.Config.GetName()))
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=PutJobFailed", d.Config.GetName(), d.Config.GetName()))
 		}
 		return err
 	}
