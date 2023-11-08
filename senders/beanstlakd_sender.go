@@ -3,6 +3,8 @@ package senders
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	beanstalk "github.com/beanstalkd/go-beanstalk"
@@ -14,6 +16,9 @@ import (
 )
 
 var bLogger = log.WithFields(log.Fields{"class": "BeanstalkdSender"})
+
+// Characters allowed in beanstalkd
+const AllowedCharacters = `[A-Za-z0-9\\\-\+\/\;\.\$\_\(\)]+`
 
 // BeanstalkdSender - Send Event to beanstalkd
 type BeanstalkdSender struct {
@@ -31,7 +36,17 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		return &captin_errors.UnretryableError{Msg: "Event control is empty", Event: e}
 	}
 
-	conn, err := beanstalk.Dial("tcp", e.Control["beanstalkd_host"].(string))
+	beanstalkdHost := e.Control["beanstalkd_host"]
+	if beanstalkdHost == nil {
+		return &captin_errors.UnretryableError{Msg: "beanstalkd_host is empty", Event: e}
+	}
+
+	beanstalkdHostStr := beanstalkdHost.(string)
+	if strings.HasPrefix(beanstalkdHostStr, "http://") || strings.HasPrefix(beanstalkdHostStr, "https://") {
+		return &captin_errors.UnretryableError{Msg: "beanstalkd_host is invalid", Event: e}
+	}
+
+	conn, err := beanstalk.Dial("tcp", beanstalkdHostStr)
 	if err != nil {
 		bLogger.WithFields(log.Fields{
 			"error": err,
@@ -42,7 +57,18 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		return err
 	}
 
-	conn.Tube = beanstalk.Tube{Conn: conn, Name: e.Control["queue_name"].(string)}
+	queueName := e.Control["queue_name"]
+	if queueName == nil {
+		return &captin_errors.UnretryableError{Msg: "queue_name is empty", Event: e}
+	}
+
+	queueNameStr := queueName.(string)
+	isValidQueueName, err := regexp.MatchString(AllowedCharacters, queueNameStr)
+	if err != nil || !isValidQueueName {
+		return &captin_errors.UnretryableError{Msg: "queue_name is invalid", Event: e}
+	}
+
+	conn.Tube = beanstalk.Tube{Conn: conn, Name: queueNameStr}
 
 	jobBody, err := json.Marshal(e.Payload)
 	if err != nil {

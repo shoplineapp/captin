@@ -35,6 +35,8 @@ blocks:
           - checkout
           - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum),deps-$SEMAPHORE_GIT_BRANCH,deps-master
           - go mod download
+          # Run beanstalkd for test
+          - docker run -d -p 11300:11300 schickling/beanstalkd
       jobs:
         - name: Suite
           commands:
