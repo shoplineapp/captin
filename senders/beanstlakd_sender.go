@@ -3,6 +3,7 @@ package senders
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"regexp"
 	"strings"
 	"time"
@@ -42,7 +43,7 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 	}
 
 	beanstalkdHostStr := beanstalkdHost.(string)
-	if strings.HasPrefix(beanstalkdHostStr, "http://") || strings.HasPrefix(beanstalkdHostStr, "https://") {
+	if isValidBeanstlakdHost(beanstalkdHostStr) == false {
 		return &captin_errors.UnretryableError{Msg: "beanstalkd_host is invalid", Event: e}
 	}
 
@@ -115,4 +116,20 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 
 	defer conn.Close()
 	return nil
+}
+
+func isValidBeanstlakdHost(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+
+	// Check is contain port
+	if err != nil {
+		return false
+	}
+
+	ip := net.ParseIP(host)
+
+	if ip == nil {
+		return !(strings.HasPrefix(host, "http://") || strings.HasPrefix(host, "https://"))
+	}
+	return true
 }

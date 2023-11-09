@@ -9,12 +9,29 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBeanstalkdSender_SendEvent_Success(t *testing.T) {
+func TestBeanstalkdSender_SendEvent_Success_WithIPAndPort(t *testing.T) {
 	sender := new(senders.BeanstalkdSender)
 	result := sender.SendEvent(
 		models.IncomingEvent{
 			Control: map[string]interface{}{
 				"beanstalkd_host": "127.0.0.1:11300",
+				"queue_name":      "foo",
+			},
+		},
+		models.Destination{
+			Config: models.Configuration{},
+		},
+	)
+
+	assert.Nil(t, result)
+}
+
+func TestBeanstalkdSender_SendEvent_Success_WithDomainAndPort(t *testing.T) {
+	sender := new(senders.BeanstalkdSender)
+	result := sender.SendEvent(
+		models.IncomingEvent{
+			Control: map[string]interface{}{
+				"beanstalkd_host": "localhost:11300",
 				"queue_name":      "foo",
 			},
 		},
@@ -42,7 +59,7 @@ func TestBeanstalkdSender_SendEvent_Failed_WithEmptyHost(t *testing.T) {
 	assert.EqualError(t, result, "UnretryableError: beanstalkd_host is empty", "Should throw UnretryableError")
 }
 
-func TestBeanstalkdSender_SendEvent_Failed_WithInvalidHost(t *testing.T) {
+func TestBeanstalkdSender_SendEvent_Failed_WithHttp(t *testing.T) {
 	sender := new(senders.BeanstalkdSender)
 	result := sender.SendEvent(
 		models.IncomingEvent{
@@ -58,7 +75,7 @@ func TestBeanstalkdSender_SendEvent_Failed_WithInvalidHost(t *testing.T) {
 	assert.EqualError(t, result, "UnretryableError: beanstalkd_host is invalid", "Should throw UnretryableError")
 }
 
-func TestBeanstalkdSender_SendEvent_Failed_WithEmptyQueueName(t *testing.T) {
+func TestBeanstalkdSender_SendEvent_Failed_WithoutQueueName(t *testing.T) {
 	sender := new(senders.BeanstalkdSender)
 	result := sender.SendEvent(
 		models.IncomingEvent{
