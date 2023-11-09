@@ -14,9 +14,6 @@ blocks:
         commands:
           - sem-version go 1.15
           # Go project boiler plate
-          - ls -ltrh
-          - whoami
-          - ls -l ~
           - export "SEMAPHORE_GIT_DIR=/tmp/${SEMAPHORE_PROJECT_NAME}"
           - export "PATH=$(go env GOPATH)/bin:${PATH}"
           - mkdir -vp "${SEMAPHORE_GIT_DIR}" "$(go env GOPATH)/bin"
