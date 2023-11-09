@@ -34,7 +34,7 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 
 	if e.Control == nil {
 		bLogger.Error("Event control is empty")
-		return &captin_errors.UnretryableError{Msg: "Event control is invalid", Event: e}
+		return &captin_errors.UnretryableError{Msg: "Event control is empty", Event: e}
 	}
 
 	beanstalkdHost := e.Control["beanstalkd_host"]
