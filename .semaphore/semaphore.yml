@@ -38,9 +38,7 @@ blocks:
           - export "PATH=$(go env GOPATH)/bin:${PATH}"
           - mkdir -vp "${SEMAPHORE_GIT_DIR}" "$(go env GOPATH)/bin"
           # Dep install db
-          # - checkout
-          - git clone --depth 1 -b "${SEMAPHORE_GIT_BRANCH}" "${SEMAPHORE_GIT_URL}" "${SEMAPHORE_GIT_DIR}"
-          - cd "${SEMAPHORE_GIT_DIR}"
+          - checkout
           - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum),deps-$SEMAPHORE_GIT_BRANCH,deps-master
           - go mod download
           # Run beanstalkd for test
