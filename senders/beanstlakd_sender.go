@@ -39,11 +39,13 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 
 	beanstalkdHost := e.Control["beanstalkd_host"]
 	if beanstalkdHost == nil || beanstalkdHost == "" {
+		bLogger.Error("beanstalkd_host is empty")
 		return &captin_errors.UnretryableError{Msg: "beanstalkd_host is empty", Event: e}
 	}
 
 	beanstalkdHostStr := beanstalkdHost.(string)
 	if isValidBeanstlakdHost(beanstalkdHostStr) == false {
+		bLogger.Error("beanstalkd_host is invalid")
 		return &captin_errors.UnretryableError{Msg: "beanstalkd_host is invalid", Event: e}
 	}
 
@@ -60,12 +62,14 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 
 	beanstalkdQueueName := e.Control["queue_name"]
 	if beanstalkdQueueName == nil || beanstalkdQueueName == "" {
+		bLogger.Error("queue_name is empty")
 		return &captin_errors.UnretryableError{Msg: "queue_name is empty", Event: e}
 	}
 
 	beanstalkdQueueNameStr := beanstalkdQueueName.(string)
 	isValidBeanstalkdQueueNameStr, err := regexp.MatchString(allowedCharacters, beanstalkdQueueNameStr)
 	if err != nil || !isValidBeanstalkdQueueNameStr {
+		bLogger.Error("queue_name is invalid")
 		return &captin_errors.UnretryableError{Msg: "queue_name is invalid", Event: e}
 	}
 
