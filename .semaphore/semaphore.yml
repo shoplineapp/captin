@@ -25,12 +25,6 @@ blocks:
             - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum),deps-$SEMAPHORE_GIT_BRANCH,deps-master
             - go mod download
             - cache store deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum) vendor
-  - name: "Run schickling/beanstalkd"
-    task:
-      jobs:
-        - name: Run schickling/beanstalkd
-          commands:
-            - docker run -d -p 11300:11300 schickling/beanstalkd
   - name: "Unit tests"
     task:
       prologue:
@@ -44,6 +38,8 @@ blocks:
           - checkout
           - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum),deps-$SEMAPHORE_GIT_BRANCH,deps-master
           - go mod download
+          # Run beanstalkd for unit test
+          - docker run -d -p 11300:11300 schickling/beanstalkd
           # Adding subdomain for test
           - echo '127.0.0.1 subdomain.localhost' | sudo tee -a /etc/hosts
       jobs:
