@@ -1,6 +1,7 @@
 package senders_test
 
 import (
+	"github.com/shoplineapp/captin/errors"
 	"testing"
 
 	models "github.com/shoplineapp/captin/models"
@@ -9,98 +10,97 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBeanstalkdSender_SendEvent_Success_WithIPAndPort(t *testing.T) {
-	sender := new(senders.BeanstalkdSender)
-	result := sender.SendEvent(
-		models.IncomingEvent{
-			Control: map[string]interface{}{
-				"beanstalkd_host": "127.0.0.1:11300",
-				"queue_name":      "foo",
-			},
-		},
-		models.Destination{
-			Config: models.Configuration{},
-		},
-	)
+func TestBeanstalkdSender_SendEvent_BeanstalkdHost(t *testing.T) {
+	tests := map[string]struct {
+		isNilInput bool
+		input      string
+		want       error
+	}{
+		"WithIPv4AndPort":             {input: "127.0.0.1:11300", want: nil},
+		"WithIPv6AndPort":             {input: "[0:0:0:0:0:0:0:1]:11300", want: nil},
+		"WithURLAndPort":              {input: "localhost:11300", want: nil},
+		"WithSubdomainAndPort":        {input: "subdomain.localhost:11300", want: nil},
+		"WithIPv4AndWithoutPort":      {input: "127.0.0.1", want: errors.UnretryableError{Msg: "beanstalkd_host is invalid"}},
+		"WithIPv6AndWithoutPort":      {input: "[0:0:0:0:0:0:0:1]", want: errors.UnretryableError{Msg: "beanstalkd_host is invalid"}},
+		"WithURLAndWithoutPort":       {input: "localhost", want: errors.UnretryableError{Msg: "beanstalkd_host is invalid"}},
+		"WithSubdomainAndWithoutPort": {input: "subdomain.localhost", want: errors.UnretryableError{Msg: "beanstalkd_host is invalid"}},
+		"WithEmptyString":             {input: "", want: errors.UnretryableError{Msg: "beanstalkd_host is empty"}},
+		"WithoutHost":                 {isNilInput: true, want: errors.UnretryableError{Msg: "beanstalkd_host is empty"}},
+	}
 
-	assert.Nil(t, result)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			sender := new(senders.BeanstalkdSender)
+
+			var beanstalkdHost string
+			if !tc.isNilInput {
+				beanstalkdHost = tc.input
+			}
+
+			got := sender.SendEvent(
+				models.IncomingEvent{
+					Control: map[string]interface{}{
+						"beanstalkd_host": beanstalkdHost,
+						"queue_name":      "foo",
+					},
+				},
+				models.Destination{
+					Config: models.Configuration{},
+				},
+			)
+
+			if tc.want == nil {
+				assert.Nil(t, got, "Should not throw error")
+
+			} else {
+				assert.EqualError(t, got, tc.want.Error(), "Should throw UnretryableError")
+			}
+
+		})
+	}
 }
 
-func TestBeanstalkdSender_SendEvent_Success_WithDomainAndPort(t *testing.T) {
-	sender := new(senders.BeanstalkdSender)
-	result := sender.SendEvent(
-		models.IncomingEvent{
-			Control: map[string]interface{}{
-				"beanstalkd_host": "localhost:11300",
-				"queue_name":      "foo",
-			},
-		},
-		models.Destination{
-			Config: models.Configuration{},
-		},
-	)
+func TestBeanstalkdSender_SendEvent_QueueName(t *testing.T) {
+	tests := map[string]struct {
+		isNilInput bool
+		input      string
+		want       error
+	}{
+		"WithValidName":         {input: "foo", want: nil},
+		"WithSpecialSymbolName": {input: "foo_bar", want: nil},
+		"WithInvalidName":       {input: "foo_!", want: errors.UnretryableError{Msg: "queue_name is invalid"}},
+		"WithEmptyString":       {input: "", want: errors.UnretryableError{Msg: "queue_name is empty"}},
+		"WithoutHost":           {isNilInput: true, want: errors.UnretryableError{Msg: "queue_name is empty"}},
+	}
 
-	assert.Nil(t, result)
-}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			sender := new(senders.BeanstalkdSender)
 
-func TestBeanstalkdSender_SendEvent_Failed_WithEmptyHost(t *testing.T) {
-	sender := new(senders.BeanstalkdSender)
-	result := sender.SendEvent(
-		models.IncomingEvent{
-			Control: map[string]interface{}{
-				"queue_name": "foo",
-			},
-		},
-		models.Destination{
-			Config: models.Configuration{},
-		},
-	)
+			var queueName string
+			if !tc.isNilInput {
+				queueName = tc.input
+			}
 
-	assert.EqualError(t, result, "UnretryableError: beanstalkd_host is empty", "Should throw UnretryableError")
-}
+			got := sender.SendEvent(
+				models.IncomingEvent{
+					Control: map[string]interface{}{
+						"beanstalkd_host": "127.0.0.1:11300",
+						"queue_name":      queueName,
+					},
+				},
+				models.Destination{
+					Config: models.Configuration{},
+				},
+			)
 
-func TestBeanstalkdSender_SendEvent_Failed_WithHttp(t *testing.T) {
-	sender := new(senders.BeanstalkdSender)
-	result := sender.SendEvent(
-		models.IncomingEvent{
-			Control: map[string]interface{}{
-				"beanstalkd_host": "http://localhost:11300",
-				"queue_name":      "foo",
-			},
-		},
-		models.Destination{
-			Config: models.Configuration{},
-		},
-	)
-	assert.EqualError(t, result, "UnretryableError: beanstalkd_host is invalid", "Should throw UnretryableError")
-}
+			if tc.want == nil {
+				assert.Nil(t, got, "Should not throw error")
 
-func TestBeanstalkdSender_SendEvent_Failed_WithoutQueueName(t *testing.T) {
-	sender := new(senders.BeanstalkdSender)
-	result := sender.SendEvent(
-		models.IncomingEvent{
-			Control: map[string]interface{}{
-				"beanstalkd_host": "127.0.0.1:11300",
-			},
-		},
-		models.Destination{
-			Config: models.Configuration{},
-		},
-	)
-	assert.EqualError(t, result, "UnretryableError: queue_name is empty", "Should throw UnretryableError")
-}
-func TestBeanstalkdSender_SendEvent_Failed_WithInvalidQueueName(t *testing.T) {
-	sender := new(senders.BeanstalkdSender)
-	result := sender.SendEvent(
-		models.IncomingEvent{
-			Control: map[string]interface{}{
-				"beanstalkd_host": "127.0.0.1:11300",
-				"queue_name":      "!",
-			},
-		},
-		models.Destination{
-			Config: models.Configuration{},
-		},
-	)
-	assert.EqualError(t, result, "UnretryableError: queue_name is invalid", "Should throw UnretryableError")
+			} else {
+				assert.EqualError(t, got, tc.want.Error(), "Should throw UnretryableError")
+			}
+
+		})
+	}
 }

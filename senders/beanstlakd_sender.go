@@ -19,7 +19,7 @@ import (
 var bLogger = log.WithFields(log.Fields{"class": "BeanstalkdSender"})
 
 // Characters allowed in beanstalkd
-const AllowedCharacters = `[A-Za-z0-9\\\-\+\/\;\.\$\_\(\)]+`
+const allowedCharacters = `^[A-Za-z0-9\\\-\+\/\;\.\$\_\(\)]+$`
 
 // BeanstalkdSender - Send Event to beanstalkd
 type BeanstalkdSender struct {
@@ -34,11 +34,11 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 
 	if e.Control == nil {
 		bLogger.Error("Event control is empty")
-		return &captin_errors.UnretryableError{Msg: "Event control is empty", Event: e}
+		return &captin_errors.UnretryableError{Msg: "Event control is invalid", Event: e}
 	}
 
 	beanstalkdHost := e.Control["beanstalkd_host"]
-	if beanstalkdHost == nil {
+	if beanstalkdHost == nil || beanstalkdHost == "" {
 		return &captin_errors.UnretryableError{Msg: "beanstalkd_host is empty", Event: e}
 	}
 
@@ -58,18 +58,18 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		return err
 	}
 
-	queueName := e.Control["queue_name"]
-	if queueName == nil {
+	beanstalkdQueueName := e.Control["queue_name"]
+	if beanstalkdQueueName == nil || beanstalkdQueueName == "" {
 		return &captin_errors.UnretryableError{Msg: "queue_name is empty", Event: e}
 	}
 
-	queueNameStr := queueName.(string)
-	isValidQueueName, err := regexp.MatchString(AllowedCharacters, queueNameStr)
-	if err != nil || !isValidQueueName {
+	beanstalkdQueueNameStr := beanstalkdQueueName.(string)
+	isValidBeanstalkdQueueNameStr, err := regexp.MatchString(allowedCharacters, beanstalkdQueueNameStr)
+	if err != nil || !isValidBeanstalkdQueueNameStr {
 		return &captin_errors.UnretryableError{Msg: "queue_name is invalid", Event: e}
 	}
 
-	conn.Tube = beanstalk.Tube{Conn: conn, Name: queueNameStr}
+	conn.Tube = beanstalk.Tube{Conn: conn, Name: beanstalkdQueueNameStr}
 
 	jobBody, err := json.Marshal(e.Payload)
 	if err != nil {
