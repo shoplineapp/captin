@@ -47,7 +47,7 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 	}
 
 	beanstalkdHostStr := beanstalkdHost.(string)
-	if isValidBeanstlakdHost(beanstalkdHostStr) == false {
+	if isValidBeanstalkdHost(beanstalkdHostStr) == false {
 		bLogger.WithFields(log.Fields{
 			"Event": e,
 		}).Error("beanstalkd_host is invalid")
@@ -131,7 +131,7 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 	return nil
 }
 
-func isValidBeanstlakdHost(addr string) bool {
+func isValidBeanstalkdHost(addr string) bool {
 	host, _, err := net.SplitHostPort(addr)
 
 	// Check is contain port
