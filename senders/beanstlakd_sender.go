@@ -18,8 +18,9 @@ import (
 
 var bLogger = log.WithFields(log.Fields{"class": "BeanstalkdSender"})
 
-// Characters allowed in beanstalkd
-const allowedCharacters = `^[A-Za-z0-9\\\-\+\/\;\.\$\_\(\)]+$`
+// Characters allowed in go-beanstalkd
+// Source: https://github.com/beanstalkd/go-beanstalk/blob/master/name.go
+const allowedCharacters = `^[A-Za-z0-9\\\-\+\/\;\.\$\_\(\)]{1,199}$`
 
 // BeanstalkdSender - Send Event to beanstalkd
 type BeanstalkdSender struct {

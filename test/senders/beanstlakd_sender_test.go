@@ -2,6 +2,7 @@ package senders_test
 
 import (
 	"github.com/shoplineapp/captin/errors"
+	"strings"
 	"testing"
 
 	models "github.com/shoplineapp/captin/models"
@@ -68,7 +69,8 @@ func TestBeanstalkdSender_SendEvent_QueueName(t *testing.T) {
 	}{
 		"WithValidName":         {input: "foo", want: nil},
 		"WithSpecialSymbolName": {input: "foo_bar", want: nil},
-		"WithInvalidName":       {input: "foo_!", want: errors.UnretryableError{Msg: "queue_name is invalid"}},
+		"WithInvalidCharacter":  {input: "foo_!", want: errors.UnretryableError{Msg: "queue_name is invalid"}},
+		"WithVeryLongName":      {input: strings.Repeat("a", 300), want: errors.UnretryableError{Msg: "queue_name is invalid"}},
 		"WithEmptyString":       {input: "", want: errors.UnretryableError{Msg: "queue_name is empty"}},
 		"WithoutHost":           {isNilInput: true, want: errors.UnretryableError{Msg: "queue_name is empty"}},
 	}
