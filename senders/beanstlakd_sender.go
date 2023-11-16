@@ -50,7 +50,7 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		}).Error("beanstalkd_host is empty")
 
 		if c.StatsdClient != nil {
-			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=EmptyBenstalkdHostName", d.Config.GetName(), d.Config.GetName()))
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=EmptyBeanstalkdHostName", d.Config.GetName(), d.Config.GetName()))
 		}
 
 		return &captin_errors.UnretryableError{Msg: "beanstalkd_host is empty", Event: e}
@@ -63,7 +63,7 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		}).Error("beanstalkd_host is invalid")
 
 		if c.StatsdClient != nil {
-			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=InvalidBenstalkdHostName", d.Config.GetName(), d.Config.GetName()))
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=InvalidBeanstalkdHostName", d.Config.GetName(), d.Config.GetName()))
 		}
 
 		return &captin_errors.UnretryableError{Msg: "beanstalkd_host is invalid", Event: e}
