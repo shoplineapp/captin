@@ -35,6 +35,11 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 
 	if e.Control == nil {
 		bLogger.Error("Event control is empty")
+
+		if c.StatsdClient != nil {
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=EmptyControl", d.Config.GetName(), d.Config.GetName()))
+		}
+
 		return &captin_errors.UnretryableError{Msg: "Event control is empty", Event: e}
 	}
 
@@ -43,6 +48,11 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		bLogger.WithFields(log.Fields{
 			"Event": e,
 		}).Error("beanstalkd_host is empty")
+
+		if c.StatsdClient != nil {
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=EmptyBenstalkdHostName", d.Config.GetName(), d.Config.GetName()))
+		}
+
 		return &captin_errors.UnretryableError{Msg: "beanstalkd_host is empty", Event: e}
 	}
 
@@ -51,6 +61,11 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		bLogger.WithFields(log.Fields{
 			"Event": e,
 		}).Error("beanstalkd_host is invalid")
+
+		if c.StatsdClient != nil {
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=InvalidBenstalkdHostName", d.Config.GetName(), d.Config.GetName()))
+		}
+
 		return &captin_errors.UnretryableError{Msg: "beanstalkd_host is invalid", Event: e}
 	}
 
@@ -70,6 +85,11 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		bLogger.WithFields(log.Fields{
 			"Event": e,
 		}).Error("queue_name is empty")
+
+		if c.StatsdClient != nil {
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=EmptyBeanstalkdQueueName", d.Config.GetName(), d.Config.GetName()))
+		}
+
 		return &captin_errors.UnretryableError{Msg: "queue_name is empty", Event: e}
 	}
 
@@ -79,6 +99,11 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		bLogger.WithFields(log.Fields{
 			"Event": e,
 		}).Error("queue_name is invalid")
+
+		if c.StatsdClient != nil {
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=InvalidBeanstalkdQueueName", d.Config.GetName(), d.Config.GetName()))
+		}
+
 		return &captin_errors.UnretryableError{Msg: "queue_name is invalid", Event: e}
 	}
 
