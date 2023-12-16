@@ -69,10 +69,10 @@ func TestBeanstalkdSender_SendEvent_QueueName(t *testing.T) {
 	}{
 		"WithValidName":         {input: "foo", want: nil},
 		"WithSpecialSymbolName": {input: "foo_bar", want: nil},
-		"WithInvalidCharacter":  {input: "foo_!", want: errors.UnretryableError{Msg: "queue_name is invalid"}},
-		"WithVeryLongName":      {input: strings.Repeat("a", 300), want: errors.UnretryableError{Msg: "queue_name is invalid"}},
-		"WithEmptyString":       {input: "", want: errors.UnretryableError{Msg: "queue_name is empty"}},
-		"WithoutHost":           {isNilInput: true, want: errors.UnretryableError{Msg: "queue_name is empty"}},
+		"WithInvalidCharacter":  {input: "foo_!", want: errors.UnretryableError{Msg: "queue_name for beanstalkd sender is invalid"}},
+		"WithVeryLongName":      {input: strings.Repeat("a", 300), want: errors.UnretryableError{Msg: "queue_name for beanstalkd sender is invalid"}},
+		"WithEmptyString":       {input: "", want: errors.UnretryableError{Msg: "queue_name for beanstalkd sender is empty"}},
+		"WithoutHost":           {isNilInput: true, want: errors.UnretryableError{Msg: "queue_name for beanstalkd sender is empty"}},
 	}
 
 	for name, tc := range tests {

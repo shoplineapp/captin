@@ -84,13 +84,13 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 	if beanstalkdQueueName == nil || beanstalkdQueueName == "" {
 		bLogger.WithFields(log.Fields{
 			"Event": e,
-		}).Error("queue_name is empty")
+		}).Error("queue_name for beanstalkd sender is empty")
 
 		if c.StatsdClient != nil {
 			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=EmptyBeanstalkdQueueName", d.Config.GetName(), d.Config.GetName()))
 		}
 
-		return &captin_errors.UnretryableError{Msg: "queue_name is empty", Event: e}
+		return &captin_errors.UnretryableError{Msg: "queue_name for beanstalkd sender is empty", Event: e}
 	}
 
 	beanstalkdQueueNameStr := beanstalkdQueueName.(string)
@@ -98,13 +98,13 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 	if err != nil || !isValidBeanstalkdQueueNameStr {
 		bLogger.WithFields(log.Fields{
 			"Event": e,
-		}).Error("queue_name is invalid")
+		}).Error("queue_name for beanstalkd sender is invalid")
 
 		if c.StatsdClient != nil {
 			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=InvalidBeanstalkdQueueName", d.Config.GetName(), d.Config.GetName()))
 		}
 
-		return &captin_errors.UnretryableError{Msg: "queue_name is invalid", Event: e}
+		return &captin_errors.UnretryableError{Msg: "queue_name for beanstalkd sender is invalid", Event: e}
 	}
 
 	conn.Tube = beanstalk.Tube{Conn: conn, Name: beanstalkdQueueNameStr}
