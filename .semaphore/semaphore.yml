@@ -7,11 +7,14 @@ agent:
 blocks:
   - name: "Warm cache"
     task:
+      env_vars:
+        - name: SEMAPHORE_GIT_DEPTH
+          value: "1"
       prologue:
         commands:
           - sem-version go 1.15
           # Go project boiler plate
-          - export "SEMAPHORE_GIT_DIR=~/src/${SEMAPHORE_PROJECT_NAME}"
+          - export "SEMAPHORE_GIT_DIR=/tmp/${SEMAPHORE_PROJECT_NAME}"
           - export "PATH=$(go env GOPATH)/bin:${PATH}"
           - mkdir -vp "${SEMAPHORE_GIT_DIR}" "$(go env GOPATH)/bin"
           # Dep install db
@@ -28,13 +31,17 @@ blocks:
         commands:
           - sem-version go 1.15
           # Go project boiler plate
-          - export "SEMAPHORE_GIT_DIR=~/src/${SEMAPHORE_PROJECT_NAME}"
+          - export "SEMAPHORE_GIT_DIR=/tmp/${SEMAPHORE_PROJECT_NAME}"
           - export "PATH=$(go env GOPATH)/bin:${PATH}"
           - mkdir -vp "${SEMAPHORE_GIT_DIR}" "$(go env GOPATH)/bin"
           # Dep install db
           - checkout
           - cache restore deps-$SEMAPHORE_GIT_BRANCH-$(checksum go.sum),deps-$SEMAPHORE_GIT_BRANCH,deps-master
           - go mod download
+          # Run beanstalkd for unit test
+          - docker run -d -p 11300:11300 schickling/beanstalkd
+          # Adding subdomain for test
+          - echo '127.0.0.1 subdomain.localhost' | sudo tee -a /etc/hosts
       jobs:
         - name: Suite
           commands:

@@ -3,6 +3,9 @@ package senders
 import (
 	"encoding/json"
 	"fmt"
+	"net"
+	"regexp"
+	"strings"
 	"time"
 
 	beanstalk "github.com/beanstalkd/go-beanstalk"
@@ -14,6 +17,10 @@ import (
 )
 
 var bLogger = log.WithFields(log.Fields{"class": "BeanstalkdSender"})
+
+// Characters allowed in go-beanstalkd
+// Source: https://github.com/beanstalkd/go-beanstalk/blob/master/name.go
+const allowedCharacters = `^[A-Za-z0-9\\\-\+\/\;\.\$\_\(\)]{1,199}$`
 
 // BeanstalkdSender - Send Event to beanstalkd
 type BeanstalkdSender struct {
@@ -28,10 +35,41 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 
 	if e.Control == nil {
 		bLogger.Error("Event control is empty")
+
+		if c.StatsdClient != nil {
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=EmptyControl", d.Config.GetName(), d.Config.GetName()))
+		}
+
 		return &captin_errors.UnretryableError{Msg: "Event control is empty", Event: e}
 	}
 
-	conn, err := beanstalk.Dial("tcp", e.Control["beanstalkd_host"].(string))
+	beanstalkdHost := e.Control["beanstalkd_host"]
+	if beanstalkdHost == nil || beanstalkdHost == "" {
+		bLogger.WithFields(log.Fields{
+			"Event": e,
+		}).Error("beanstalkd_host is empty")
+
+		if c.StatsdClient != nil {
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=EmptyBeanstalkdHostName", d.Config.GetName(), d.Config.GetName()))
+		}
+
+		//return &captin_errors.UnretryableError{Msg: "beanstalkd_host is empty", Event: e}
+	}
+
+	beanstalkdHostStr := beanstalkdHost.(string)
+	if isValidBeanstalkdHost(beanstalkdHostStr) == false {
+		bLogger.WithFields(log.Fields{
+			"Event": e,
+		}).Error("beanstalkd_host is invalid")
+
+		if c.StatsdClient != nil {
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=InvalidBeanstalkdHostName", d.Config.GetName(), d.Config.GetName()))
+		}
+
+		//return &captin_errors.UnretryableError{Msg: "beanstalkd_host is invalid", Event: e}
+	}
+
+	conn, err := beanstalk.Dial("tcp", beanstalkdHostStr)
 	if err != nil {
 		bLogger.WithFields(log.Fields{
 			"error": err,
@@ -42,7 +80,34 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		return err
 	}
 
-	conn.Tube = beanstalk.Tube{Conn: conn, Name: e.Control["queue_name"].(string)}
+	beanstalkdQueueName := e.Control["queue_name"]
+	if beanstalkdQueueName == nil || beanstalkdQueueName == "" {
+		bLogger.WithFields(log.Fields{
+			"Event": e,
+		}).Error("queue_name for beanstalkd sender is empty")
+
+		if c.StatsdClient != nil {
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=EmptyBeanstalkdQueueName", d.Config.GetName(), d.Config.GetName()))
+		}
+
+		//return &captin_errors.UnretryableError{Msg: "queue_name for beanstalkd sender is empty", Event: e}
+	}
+
+	beanstalkdQueueNameStr := beanstalkdQueueName.(string)
+	isValidBeanstalkdQueueNameStr, err := regexp.MatchString(allowedCharacters, beanstalkdQueueNameStr)
+	if err != nil || !isValidBeanstalkdQueueNameStr {
+		bLogger.WithFields(log.Fields{
+			"Event": e,
+		}).Error("queue_name for beanstalkd sender is invalid")
+
+		if c.StatsdClient != nil {
+			c.StatsdClient.Increment(fmt.Sprintf("hook.sender.beanstalkd.error,metricname=%s,hook=%s,code=InvalidBeanstalkdQueueName", d.Config.GetName(), d.Config.GetName()))
+		}
+
+		//return &captin_errors.UnretryableError{Msg: "queue_name for beanstalkd sender is invalid", Event: e}
+	}
+
+	conn.Tube = beanstalk.Tube{Conn: conn, Name: beanstalkdQueueNameStr}
 
 	jobBody, err := json.Marshal(e.Payload)
 	if err != nil {
@@ -89,4 +154,20 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 
 	defer conn.Close()
 	return nil
+}
+
+func isValidBeanstalkdHost(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+
+	// Check is contain port
+	if err != nil {
+		return false
+	}
+
+	ip := net.ParseIP(host)
+
+	if ip == nil {
+		return !(strings.HasPrefix(host, "http://") || strings.HasPrefix(host, "https://"))
+	}
+	return true
 }
