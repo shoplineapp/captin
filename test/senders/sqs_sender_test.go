@@ -1,16 +1,17 @@
 package senders_test
 
 import (
-	"os"
+	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"testing"
 
 	aws "github.com/aws/aws-sdk-go/aws"
 	aws_sqs "github.com/aws/aws-sdk-go/service/sqs"
 	aws_sqsiface "github.com/aws/aws-sdk-go/service/sqs/sqsiface"
-	models "github.com/shoplineapp/captin/models"
-	. "github.com/shoplineapp/captin/senders"
+	models "github.com/shoplineapp/captin/v2/models"
+	. "github.com/shoplineapp/captin/v2/senders"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -48,6 +49,7 @@ func TestSqsSender_SendEvent_Success(t *testing.T) {
 
 	sender.DefaultClient = sqs
 	result := sender.SendEvent(
+		context.Background(),
 		models.IncomingEvent{},
 		models.Destination{
 			Config: models.Configuration{},
@@ -67,6 +69,7 @@ func TestSqsSender_SendEvent_Failed(t *testing.T) {
 
 	sender.DefaultClient = sqs
 	result := sender.SendEvent(
+		context.Background(),
 		models.IncomingEvent{Control: map[string]interface{}{"result": "failed"}},
 		models.Destination{
 			Config: models.Configuration{Name: "failed"},
@@ -121,6 +124,7 @@ func TestSqsSender_SendEvent_UseAccessKey_Success(t *testing.T) {
 	sender.DestinationClientMap["test_destination"] = sqs
 
 	result := sender.SendEvent(
+		context.Background(),
 		models.IncomingEvent{},
 		models.Destination{
 			Config: models.Configuration{

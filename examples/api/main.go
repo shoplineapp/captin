@@ -7,10 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	core "github.com/shoplineapp/captin/core"
-	incoming "github.com/shoplineapp/captin/incoming"
-	stores "github.com/shoplineapp/captin/internal/stores"
-	models "github.com/shoplineapp/captin/models"
+	core "github.com/shoplineapp/captin/v2/core"
+	incoming "github.com/shoplineapp/captin/v2/incoming"
+	stores "github.com/shoplineapp/captin/v2/internal/stores"
+	models "github.com/shoplineapp/captin/v2/models"
 )
 
 func main() {

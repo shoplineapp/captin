@@ -1,12 +1,13 @@
 package senders_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
-	models "github.com/shoplineapp/captin/models"
+	models "github.com/shoplineapp/captin/v2/models"
 
-	"github.com/shoplineapp/captin/senders"
+	"github.com/shoplineapp/captin/v2/senders"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,6 +39,7 @@ func TestBeanstalkdSender_SendEvent_BeanstalkdHost(t *testing.T) {
 			}
 
 			got := sender.SendEvent(
+				context.Background(),
 				models.IncomingEvent{
 					Control: map[string]interface{}{
 						"beanstalkd_host": beanstalkdHost,
@@ -83,6 +85,7 @@ func TestBeanstalkdSender_SendEvent_QueueName(t *testing.T) {
 			}
 
 			got := sender.SendEvent(
+				context.Background(),
 				models.IncomingEvent{
 					Control: map[string]interface{}{
 						"beanstalkd_host": "127.0.0.1:11300",

@@ -2,7 +2,7 @@ package errors
 
 import (
 	"fmt"
-	interfaces "github.com/shoplineapp/captin/interfaces"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
 )
 
 // ExecutionError - Error on executing events

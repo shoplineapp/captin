@@ -1,8 +1,9 @@
 package outgoing
 
 import (
-	destination_filters "github.com/shoplineapp/captin/destinations/filters"
-	models "github.com/shoplineapp/captin/models"
+	"context"
+
+	destination_filters "github.com/shoplineapp/captin/v2/destinations/filters"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -11,7 +12,7 @@ var cLogger = log.WithFields(log.Fields{"class": "Custom"})
 type Custom struct{}
 
 // Sift - Custom check will filter ineligible destination
-func (c Custom) Sift(e *models.IncomingEvent, destinations []models.Destination, filters []destination_filters.DestinationFilterInterface, middlewares []destination_filters.DestinationMiddlewareInterface) []models.Destination {
+func (c Custom) Sift(ctx context.Context, e *models.IncomingEvent, destinations []models.Destination, filters []destination_filters.DestinationFilterInterface, middlewares []destination_filters.DestinationMiddlewareInterface) []models.Destination {
 	cLogger.WithFields(log.Fields{
 		"event":        e,
 		"destinations": destinations,
@@ -22,12 +23,13 @@ func (c Custom) Sift(e *models.IncomingEvent, destinations []models.Destination,
 	for _, destination := range destinations {
 		eligible := true
 		for _, filter := range filters {
-			if eligible == false || filter.Applicable(*e, destination) == false {
+			if !filter.Applicable(ctx, *e, destination) {
 				continue
 			}
-			valid, _ := filter.Run(*e, destination)
-			if valid != true {
+			valid, _ := filter.Run(ctx, *e, destination)
+			if !valid {
 				eligible = false
+				break
 			}
 		}
 		if eligible {

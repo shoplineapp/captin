@@ -2,13 +2,14 @@ package senders
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/models"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	models "github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -26,12 +27,7 @@ type HTTPProxyResponse struct {
 // in order to pass event meta data to destinations,
 // HTTPProxyEventSender only parses payload for general usage of 
 // third party API calls.
-type HTTPProxyEventSender struct {
-	interfaces.EventSenderInterface
-}
-
-// SendEvent - #HTTPProxyEventSender SendEvent
-func (c *HTTPProxyEventSender) SendEvent(ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) error {
+func (c *HTTPProxyEventSender) SendEvent(ctx context.Context, ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) (err error) {
 	e := ev.(models.IncomingEvent)
 	d := dv.(models.Destination)
 

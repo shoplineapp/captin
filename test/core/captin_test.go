@@ -1,13 +1,15 @@
 package models_test
 
 import (
-	"github.com/stretchr/testify/assert"
+	"context"
 	"testing"
 
-	. "github.com/shoplineapp/captin/core"
-	captin_errors "github.com/shoplineapp/captin/errors"
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/models"
+	"github.com/stretchr/testify/assert"
+
+	. "github.com/shoplineapp/captin/v2/core"
+	captin_errors "github.com/shoplineapp/captin/v2/errors"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	models "github.com/shoplineapp/captin/v2/models"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -38,7 +40,7 @@ func TestExecute(t *testing.T) {
 	var errors []interfaces.ErrorInterface
 	captin := Captin{}
 
-	_, errors = captin.Execute(models.IncomingEvent{})
+	_, errors = captin.Execute(context.Background(), models.IncomingEvent{})
 
 	if assert.Error(t, errors[0], "invalid incoming event") {
 		assert.IsType(t, errors[0], &captin_errors.ExecutionError{})

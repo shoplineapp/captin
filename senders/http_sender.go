@@ -2,12 +2,13 @@ package senders
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"io/ioutil"
 	"net/http"
 
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/models"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	models "github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -25,8 +26,7 @@ type HTTPEventSender struct {
 	interfaces.EventSenderInterface
 }
 
-// SendEvent - #HttpEventSender SendEvent
-func (c *HTTPEventSender) SendEvent(ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) error {
+func (c *HTTPEventSender) SendEvent(ctx context.Context, ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) (err error) {
 	e := ev.(models.IncomingEvent)
 	d := dv.(models.Destination)
 

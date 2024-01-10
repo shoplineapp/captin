@@ -1,6 +1,7 @@
 package mocks
 
 import (
+	"context"
 	"time"
 
 	"github.com/shoplineapp/captin/interfaces"
@@ -13,8 +14,7 @@ type ThrottleMock struct {
 	mock.Mock
 }
 
-// CanTrigger - Check if can trigger
-func (t *ThrottleMock) CanTrigger(id string, period time.Duration) (bool, time.Duration, error) {
-	args := t.Called(id, period)
+func (t *ThrottleMock) CanTrigger(ctx context.Context, id string, period time.Duration) (bool, time.Duration, error) {
+	args := t.Called(ctx, id, period)
 	return args.Bool(0), args.Get(1).(time.Duration), args.Error(2)
 }
