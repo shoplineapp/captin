@@ -13,8 +13,11 @@ import (
 	statsd "github.com/joeycumines/statsd"
 	captin_errors "github.com/shoplineapp/captin/v2/errors"
 	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	"github.com/shoplineapp/captin/v2/internal/helpers"
 	models "github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 var bLogger = log.WithFields(log.Fields{"class": "BeanstalkdSender"})
@@ -31,6 +34,15 @@ type BeanstalkdSender struct {
 
 // SendEvent - #BeanstalkdSender SendEvent
 func (c *BeanstalkdSender) SendEvent(ctx context.Context, ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) (err error) {
+	ctx, span := helpers.Tracer().Start(ctx, "captin.BeanstalkdSender.SendEvent")
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+
 	e := ev.(models.IncomingEvent)
 	d := dv.(models.Destination)
 
@@ -69,6 +81,7 @@ func (c *BeanstalkdSender) SendEvent(ctx context.Context, ev interfaces.Incoming
 
 		//return &captin_errors.UnretryableError{Msg: "beanstalkd_host is invalid", Event: e}
 	}
+	span.SetAttributes(attribute.String("beanstalkdHost", beanstalkdHostStr))
 
 	conn, err := beanstalk.Dial("tcp", beanstalkdHostStr)
 	if err != nil {
@@ -80,6 +93,7 @@ func (c *BeanstalkdSender) SendEvent(ctx context.Context, ev interfaces.Incoming
 		}
 		return err
 	}
+	defer conn.Close()
 
 	beanstalkdQueueName := e.Control["queue_name"]
 	if beanstalkdQueueName == nil || beanstalkdQueueName == "" {
@@ -95,6 +109,7 @@ func (c *BeanstalkdSender) SendEvent(ctx context.Context, ev interfaces.Incoming
 	}
 
 	beanstalkdQueueNameStr := beanstalkdQueueName.(string)
+	span.SetAttributes(attribute.String("beanstalkdQueueName", beanstalkdQueueNameStr))
 	isValidBeanstalkdQueueNameStr, err := regexp.MatchString(allowedCharacters, beanstalkdQueueNameStr)
 	if err != nil || !isValidBeanstalkdQueueNameStr {
 		bLogger.WithFields(log.Fields{
@@ -110,6 +125,7 @@ func (c *BeanstalkdSender) SendEvent(ctx context.Context, ev interfaces.Incoming
 
 	conn.Tube = beanstalk.Tube{Conn: conn, Name: beanstalkdQueueNameStr}
 
+	e.DistributedTracingInfo.InjectContext(ctx)
 	jobBody, err := json.Marshal(e.Payload)
 	if err != nil {
 		bLogger.WithFields(log.Fields{
@@ -153,7 +169,6 @@ func (c *BeanstalkdSender) SendEvent(ctx context.Context, ev interfaces.Incoming
 		"jobBody": string(jobBody),
 	}).Info("Enqueue job.")
 
-	defer conn.Close()
 	return nil
 }
 

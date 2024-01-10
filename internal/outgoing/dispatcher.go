@@ -18,6 +18,9 @@ import (
 	"github.com/shoplineapp/captin/v2/internal/helpers"
 	models "github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var dLogger = log.WithFields(log.Fields{"class": "Dispatcher"})
@@ -114,6 +117,15 @@ func (d *Dispatcher) Dispatch(
 	}
 	d.dispatchCalled.Store(true)
 	responses := make(chan int, len(d.destinations))
+	ctx = e.DistributedTracingInfo.PropagateIntoContext(ctx)
+	ctx, span := helpers.Tracer().Start(ctx, "captin.Dispatch", trace.WithAttributes(
+		attribute.String("event_key", e.Key),
+		attribute.Bool("dispatch_already_called", alreadyCalled),
+		attribute.Int("raw_destination_count", len(d.destinations)),
+	))
+	defer span.End()
+	// propagate the trace context into the event, for both downstream receivers, and also later workers if the event is delayed or throttled
+	e.DistributedTracingInfo.InjectContext(ctx)
 	for _, destination := range d.destinations {
 		config := destination.Config
 		canTrigger, timeRemain, err := throttler.CanTrigger(ctx, getEventKey(ctx, store, e, destination), config.GetThrottleValue())
@@ -186,6 +198,7 @@ func (d *Dispatcher) injectThrottledPayloads(ctx context.Context, e models.Incom
 		store.Remove(ctx, queueKey)
 		for _, payloadStr := range payloadStrings {
 			payload := map[string]interface{}{}
+			// TODO: handle error
 			json.Unmarshal([]byte(payloadStr), &payload)
 			e.ThrottledPayloads = append(e.ThrottledPayloads, payload)
 		}
@@ -201,6 +214,7 @@ func (d *Dispatcher) injectThrottledDocuments(ctx context.Context, e models.Inco
 		store.Remove(ctx, queueKey)
 		for _, documentStr := range documentStrings {
 			document := map[string]interface{}{}
+			// TODO: handle error
 			json.Unmarshal([]byte(documentStr), &document)
 			e.ThrottledDocuments = append(e.ThrottledDocuments, document)
 		}
@@ -243,6 +257,7 @@ func (d *Dispatcher) customizePayload(ctx context.Context, e models.IncomingEven
 }
 
 func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
+	ctx, span := helpers.Tracer().Start(ctx, "captin.processDelayedEvent")
 	defer func() {
 		if err := recover(); err != nil {
 			err := &captin_errors.DispatcherError{
@@ -250,7 +265,10 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 				Destination: dest,
 				Event:       e,
 			}
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Msg)
 			d.OnError(ctx, e, err)
+			span.End()
 		}
 	}()
 
@@ -274,6 +292,8 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 			"event":        e,
 			"eventDataKey": "dataKey",
 		}).Debug("Skipping update on event data")
+		span.AddEvent("Skipping update on event data")
+		span.End()
 		return
 	}
 
@@ -291,6 +311,7 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 			"enqueuePayload": jsonString,
 			"ttl":            ttl,
 		}).Debug("Storing throttled payload")
+		span.AddEvent("Storing throttled payload", trace.WithAttributes(attribute.String("queueKey", queueKey), attribute.String("throttleValue", ttl.String())))
 		store.Enqueue(ctx, queueKey, string(jsonString), ttl)
 	}
 
@@ -308,6 +329,7 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 			"enqueueDocument": jsonString,
 			"ttl":             ttl,
 		}).Debug("Storing throttled document")
+		span.AddEvent("Storing throttled document", trace.WithAttributes(attribute.String("queueKey", queueKey), attribute.String("throttleValue", ttl.String())))
 		store.Enqueue(ctx, queueKey, string(jsonString), ttl)
 	}
 
@@ -332,16 +354,20 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 
 		// Schedule send event later
 		dispatcher.TrackAfterFuncJob(timeRemain, func() {
+			defer span.End()
 			dLogger.WithFields(log.Fields{"key": dataKey}).Debug("After event callback")
-			payload, exists, _, _ := store.Get(dataKey)
+			payload, exists, _, _ := store.Get(ctx, dataKey)
 			// Key might be deleted by another worker, resulting in data not found
 			if !exists {
 				dLogger.WithFields(log.Fields{"key": dataKey}).Debug("Event data not found")
 				err := &captin_errors.UnretryableError{Msg: "Event data not found", Event: e, Destination: dest}
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Msg)
 				d.OnError(ctx, models.IncomingEvent{}, err)
 				return
 			}
 			event := models.IncomingEvent{}
+			// TODO: check error
 			json.Unmarshal([]byte(payload), &event)
 			d.sendEvent(ctx, event, dest, store, documentStore)
 			store.Remove(ctx, dataKey)
@@ -390,6 +416,11 @@ func getEventThrottledDocumentsKey(ctx context.Context, s interfaces.StoreInterf
 	return s.DataKey(ctx, e, d, "", "-throttled_documents")
 }
 
+// TODO:
+// This method and subsequential calls should be extracted as a "sub-Dispatcher" dedicated for one destination, so that
+// (1) the logic are clearer
+// (2) we can keep destination-specific state in the sub-Dispatcher instead of passing everything as arguments again and again
+// (3) we can keep context and span for distributed tracing
 func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
 	config := destination.Config
 	callbackLogger := dLogger.WithFields(log.Fields{
@@ -399,6 +430,13 @@ func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, de
 		"callback_url":   destination.GetCallbackURL(),
 		"document_store": destination.GetDocumentStore(),
 	})
+	// derive a new context and new span for this destination
+	ctx, span := helpers.Tracer().Start(ctx, "captin.sendEvent", trace.WithAttributes(
+		attribute.String("destination", config.GetName()),
+		attribute.String("action", evt.Key),
+		attribute.String("callback_url", destination.GetCallbackURL()),
+		attribute.String("document_store", destination.GetDocumentStore()),
+	))
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -409,8 +447,10 @@ func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, de
 				Destination: destination,
 				Event:       evt,
 			})
+			span.RecordError(err.(error))
+			span.SetStatus(codes.Error, errMsg)
+			span.End()
 		}
-		return
 	}()
 
 	callbackLogger.Debug("Preprocess payload and document")
@@ -435,6 +475,7 @@ func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, de
 	if senderKey == "" {
 		senderKey = "http"
 	}
+	span.SetAttributes(attribute.String("sender", senderKey))
 	sender, senderExists := d.senderMapping[senderKey]
 	if senderExists == false {
 		panic(&captin_errors.DispatcherError{
@@ -446,6 +487,7 @@ func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, de
 
 	// Wrap event sender and error handling as closure for reusing in delayer
 	_sendEvent := func() {
+		defer span.End()
 		defer func() {
 			if err := recover(); err != nil {
 				var newErr error
@@ -461,10 +503,15 @@ func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, de
 					}
 				}
 				d.OnError(ctx, evt, newErr)
+				span.RecordError(newErr)
+				span.SetStatus(codes.Error, newErr.Error())
 			}
 		}()
+		span.AddEvent("_sendEvent")
 		// Deep clone a new instance to prevent concurrent iteration and write on json.Marshal
 		event := deepcopy.Copy(evt).(models.IncomingEvent)
+		// propagate the new trace context into the event
+		event.DistributedTracingInfo.InjectContext(ctx)
 		err := sender.SendEvent(ctx, event, destination)
 		if err != nil {
 			panic(err)
@@ -473,6 +520,7 @@ func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, de
 	}
 
 	if destination.RequireDelay(evt) {
+		span.SetAttributes(attribute.Bool("RequireDelay", true))
 		// Sending message with delay in goroutine, no error will be caught
 		callbackLogger.Info(fmt.Sprintf("Event requires delay"))
 		if d.delayer != nil {

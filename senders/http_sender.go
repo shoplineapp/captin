@@ -8,48 +8,52 @@ import (
 	"net/http"
 
 	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	"github.com/shoplineapp/captin/v2/internal/helpers"
 	models "github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/codes"
 )
 
 var hLogger = log.WithFields(log.Fields{"class": "HttpEventSender"})
 
-// HTTPResponse - HTTP Response
-type HTTPResponse struct {
-	url      string
-	response *http.Response
-	err      error
-}
+var _ interfaces.EventSenderInterface = &HTTPEventSender{}
 
 // HTTPEventSender - Send Event through HTTP
-type HTTPEventSender struct {
-	interfaces.EventSenderInterface
-}
+type HTTPEventSender struct{}
 
 func (c *HTTPEventSender) SendEvent(ctx context.Context, ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) (err error) {
+	ctx, span := helpers.Tracer().Start(ctx, "captin.HTTPEventSender.SendEvent")
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+
 	e := ev.(models.IncomingEvent)
 	d := dv.(models.Destination)
 
 	url := d.GetCallbackURL()
+	e.DistributedTracingInfo.InjectContext(ctx)
 	payload, err := e.ToJson()
 
 	if err != nil {
 		return err
 	}
 
-	// TODO: Read from config
-	req, reqErr := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	req, reqErr := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payload))
 	if reqErr != nil {
 		return reqErr
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
 	client := &http.Client{
-		Transport: tr,
+		// for tracing
+		Transport: otelhttp.NewTransport(&http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}),
 	}
 
 	res, resErr := client.Do(req)
