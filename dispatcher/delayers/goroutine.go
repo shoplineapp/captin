@@ -12,9 +12,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type GoroutineDelayer struct {
-	interfaces.DispatchDelayerInterface
-}
+var _ interfaces.DispatchDelayerInterface = GoroutineDelayer{}
+
+type GoroutineDelayer struct{}
 
 var dLogger = log.WithFields(log.Fields{"class": "Goroutine"})
 

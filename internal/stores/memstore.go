@@ -19,9 +19,10 @@ type item struct {
 	ttl        time.Duration
 }
 
+var _ interfaces.StoreInterface = &MemoryStore{}
+
 // MemoryStore - In-app memory storage
 type MemoryStore struct {
-	interfaces.StoreInterface
 	m    map[string]*item
 	lock sync.Mutex
 }

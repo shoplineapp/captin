@@ -8,10 +8,11 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+var _ interfaces.EventSenderInterface = &SenderMock{}
+
 // SenderMock - Mock of SenderInterface
 type SenderMock struct {
 	mock.Mock
-	interfaces.EventSenderInterface
 }
 
 // SendEvent - Send an event
