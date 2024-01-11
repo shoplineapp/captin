@@ -3,7 +3,7 @@ package helpers_test
 import (
   "testing"
 
-  helpers "github.com/shoplineapp/captin/internal/helpers"
+  helpers "github.com/shoplineapp/captin/v2/internal/helpers"
   "github.com/stretchr/testify/assert"
 )
 

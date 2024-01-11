@@ -1,8 +1,10 @@
 package mocks
 
 import (
-	"github.com/shoplineapp/captin/interfaces"
-	"github.com/shoplineapp/captin/models"
+	"context"
+
+	"github.com/shoplineapp/captin/v2/interfaces"
+	"github.com/shoplineapp/captin/v2/models"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -13,9 +15,9 @@ type SenderMock struct {
 }
 
 // SendEvent - Send an event
-func (s *SenderMock) SendEvent(ie interfaces.IncomingEventInterface, id interfaces.DestinationInterface) error {
+func (s *SenderMock) SendEvent(ctx context.Context, ie interfaces.IncomingEventInterface, id interfaces.DestinationInterface) error {
 	e := ie.(models.IncomingEvent)
 	d := id.(models.Destination)
-	args := s.Called(e, d)
+	args := s.Called(ctx, e, d)
 	return args.Error(0)
 }

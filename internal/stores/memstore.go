@@ -1,12 +1,13 @@
 package stores
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	"github.com/shoplineapp/captin/models"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	"github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -48,7 +49,7 @@ func NewMemoryStore() *MemoryStore {
 }
 
 // Get - Get value from store, return with remaining time
-func (ms *MemoryStore) Get(key string) (string, bool, time.Duration, error) {
+func (ms *MemoryStore) Get(_ context.Context, key string) (string, bool, time.Duration, error) {
 	ms.lock.Lock()
 	defer ms.lock.Unlock()
 
@@ -60,7 +61,7 @@ func (ms *MemoryStore) Get(key string) (string, bool, time.Duration, error) {
 }
 
 // Set - Set value into store with ttl
-func (ms *MemoryStore) Set(key string, value string, ttl time.Duration) (bool, error) {
+func (ms *MemoryStore) Set(_ context.Context, key string, value string, ttl time.Duration) (bool, error) {
 	ms.lock.Lock()
 	it, ok := ms.m[key]
 	if !ok {
@@ -74,7 +75,7 @@ func (ms *MemoryStore) Set(key string, value string, ttl time.Duration) (bool, e
 }
 
 // Update - Update value into store
-func (ms *MemoryStore) Update(key string, value string) (bool, error) {
+func (ms *MemoryStore) Update(_ context.Context, key string, value string) (bool, error) {
 	ms.lock.Lock()
 	defer ms.lock.Unlock()
 
@@ -88,7 +89,7 @@ func (ms *MemoryStore) Update(key string, value string) (bool, error) {
 }
 
 // Remove - Remove value in store
-func (ms *MemoryStore) Remove(key string) (bool, error) {
+func (ms *MemoryStore) Remove(_ context.Context, key string) (bool, error) {
 	ms.lock.Lock()
 	delete(ms.m, key)
 	ms.lock.Unlock()
@@ -96,7 +97,7 @@ func (ms *MemoryStore) Remove(key string) (bool, error) {
 }
 
 // Enqueue - ttl: optional params for setting the ttl of queue when first element is enqueued
-func (ms *MemoryStore) Enqueue(key string, value string, ttl time.Duration) (bool, error) {
+func (ms *MemoryStore) Enqueue(_ context.Context, key string, value string, ttl time.Duration) (bool, error) {
 	ms.lock.Lock()
 	_, ok := ms.m[key]
 	if !ok {
@@ -113,7 +114,7 @@ func (ms *MemoryStore) Enqueue(key string, value string, ttl time.Duration) (boo
 	return true, nil
 }
 
-func (ms *MemoryStore) GetQueue(key string) ([]string, bool, time.Duration, error) {
+func (ms *MemoryStore) GetQueue(_ context.Context, key string) ([]string, bool, time.Duration, error) {
 	ms.lock.Lock()
 	defer ms.lock.Unlock()
 
@@ -133,7 +134,7 @@ func (ms *MemoryStore) Len() int {
 }
 
 // DataKey - Generate DataKey with events and destination
-func (ms *MemoryStore) DataKey(ev interfaces.IncomingEventInterface, dest interfaces.DestinationInterface, prefix string, suffix string) string {
+func (ms *MemoryStore) DataKey(_ context.Context, ev interfaces.IncomingEventInterface, dest interfaces.DestinationInterface, prefix string, suffix string) string {
 	e := ev.(models.IncomingEvent)
 	config := dest.(models.Destination).Config
 	return fmt.Sprintf("%s%s.%s.%s%s", prefix, e.Key, config.GetName(), e.TargetId, suffix)

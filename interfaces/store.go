@@ -1,26 +1,27 @@
 package interfaces
 
 import (
+	"context"
 	"time"
 )
 
 // StoreInterface - Store for throttle events
 type StoreInterface interface {
 	// Get - Get value from store, return with remaining time
-	Get(key string) (string, bool, time.Duration, error)
+	Get(ctx context.Context, key string) (payload string, exists bool, ttl time.Duration, err error)
 
 	// Set - Set value into store with ttl
-	Set(key string, value string, ttl time.Duration) (bool, error)
+	Set(ctx context.Context, key string, value string, ttl time.Duration) (bool, error)
 
 	// Update - Update value for key
-	Update(key string, value string) (bool, error)
+	Update(ctx context.Context, key string, value string) (bool, error)
 
 	// Remove - Remove value for key
-	Remove(key string) (bool, error)
+	Remove(ctx context.Context, key string) (bool, error)
 
-	DataKey(e IncomingEventInterface, dest DestinationInterface, prefix string, suffix string) string
+	DataKey(ctx context.Context, e IncomingEventInterface, dest DestinationInterface, prefix string, suffix string) string
 
-	Enqueue(key string, value string, ttl time.Duration) (bool, error)
+	Enqueue(ctx context.Context, key string, value string, ttl time.Duration) (bool, error)
 
-	GetQueue(key string) ([]string, bool, time.Duration, error)
+	GetQueue(ctx context.Context, key string) (values []string, exists bool, ttl time.Duration, err error)
 }

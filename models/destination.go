@@ -1,19 +1,20 @@
 package models
 
 import (
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	"os"
 	"fmt"
-	"time"
-	"strings"
+	"os"
 	"strconv"
+	"strings"
+	"time"
+
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
 )
 
 // Destination - Event dispatch destination
 type Destination struct {
 	interfaces.DestinationInterface
 
-	Config interfaces.ConfigurationInterface
+	Config      interfaces.ConfigurationInterface
 	callbackUrl string
 }
 
@@ -55,8 +56,8 @@ func (d Destination) GetDocumentStore() string {
 }
 
 func (d Destination) RequireDelay(evt interfaces.IncomingEventInterface) bool {
-	if (d.Config.GetDelayValue() <= time.Duration(0) ||
-            evt.GetOutstandingDelaySeconds() == time.Duration(0)) {
+	if d.Config.GetDelayValue() <= time.Duration(0) ||
+		evt.GetOutstandingDelaySeconds() == time.Duration(0) {
 		return false
 	}
 
@@ -76,7 +77,7 @@ func (d Destination) GetRetryBackoffSeconds(evt interfaces.IncomingEventInterfac
 
 	control := evt.GetControl()
 	retryCount, _ := control["retry_count"].(float64)
-	if (len(backoffConfig) > 0 && len(backoffConfig) <= int(retryCount)) {
+	if len(backoffConfig) > 0 && len(backoffConfig) <= int(retryCount) {
 		lastConfig := backoffConfig[(len(backoffConfig) - 1):]
 		seconds, pErr := strconv.ParseInt(lastConfig[0], 10, 64)
 		if pErr != nil {
@@ -91,7 +92,6 @@ func (d Destination) GetRetryBackoffSeconds(evt interfaces.IncomingEventInterfac
 	}
 	return seconds
 }
-
 
 func trimArray(arr []string) []string {
 	var r []string

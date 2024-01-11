@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/shoplineapp/captin/models"
+	. "github.com/shoplineapp/captin/v2/models"
 )
 
 func TestDestination_GetCallbackURL(t *testing.T) {

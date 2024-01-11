@@ -1,8 +1,10 @@
 package senders
 
 import (
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/models"
+	"context"
+
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	models "github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
 
 	aws "github.com/aws/aws-sdk-go/aws"
@@ -30,7 +32,7 @@ func NewSqsSender(defaultAwsConfig aws.Config) *SqsSender {
 }
 
 // SendEvent - Send incoming event into SQS queue
-func (s *SqsSender) SendEvent(ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) error {
+func (s *SqsSender) SendEvent(ctx context.Context, ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) (err error) {
 	e := ev.(models.IncomingEvent)
 	d := dv.(models.Destination)
 

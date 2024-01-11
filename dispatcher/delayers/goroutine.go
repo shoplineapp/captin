@@ -1,13 +1,14 @@
 package dispatcher_delayers
 
 import (
+	"context"
 	"fmt"
 
 	"time"
 
-	"github.com/shoplineapp/captin/dispatcher"
-	"github.com/shoplineapp/captin/interfaces"
-	"github.com/shoplineapp/captin/models"
+	"github.com/shoplineapp/captin/v2/dispatcher"
+	"github.com/shoplineapp/captin/v2/interfaces"
+	"github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,7 +18,7 @@ type GoroutineDelayer struct {
 
 var dLogger = log.WithFields(log.Fields{"class": "Goroutine"})
 
-func (d GoroutineDelayer) Execute(evt interfaces.IncomingEventInterface, dest interfaces.DestinationInterface, exec func()) {
+func (d GoroutineDelayer) Execute(ctx context.Context, evt interfaces.IncomingEventInterface, dest interfaces.DestinationInterface, exec func()) {
 	event := d.TapDelayedEvent(evt.(models.IncomingEvent), dest.(models.Destination))
 	config := dest.GetConfig()
 

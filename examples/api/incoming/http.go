@@ -2,8 +2,8 @@ package incoming
 
 import (
 	"github.com/gin-gonic/gin"
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/models"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	models "github.com/shoplineapp/captin/v2/models"
 	"net/http"
 )
 
@@ -18,7 +18,7 @@ func (h *HttpEventHandler) Setup(c interfaces.CaptinInterface) {
 
 func (h HttpEventHandler) SetRoutes(router *gin.Engine) {
 	router.GET("/", func(c *gin.Context) {
-		c.String(200, "github.com/shoplineapp/captin aboard")
+		c.String(200, "github.com/shoplineapp/captin/v2 aboard")
 	})
 	router.POST("/api/events", func(c *gin.Context) {
 		h.HandleEventCreation(c)
@@ -35,7 +35,7 @@ func (h HttpEventHandler) HandleEventCreation(c *gin.Context) {
 		return
 	}
 
-	_, errors := h.captin.Execute(event)
+	_, errors := h.captin.Execute(c, event)
 	if len(errors) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Error occurred when handling event"})
 		return

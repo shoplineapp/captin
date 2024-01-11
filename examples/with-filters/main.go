@@ -8,9 +8,9 @@ import (
 
 	filters "example-with-filters/filters"
 	middlewares "example-with-filters/middlewares"
-	core "github.com/shoplineapp/captin/core"
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/models"
+	core "github.com/shoplineapp/captin/v2/core"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	models "github.com/shoplineapp/captin/v2/models"
 )
 
 func main() {

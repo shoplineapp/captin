@@ -7,7 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/shoplineapp/captin/interfaces"
+
+	"github.com/shoplineapp/captin/v2/interfaces"
 )
 
 // Configuration - Webhook Configuration Model

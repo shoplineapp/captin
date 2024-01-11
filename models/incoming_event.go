@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	interfaces "github.com/shoplineapp/captin/interfaces"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
 )
 
 type IncomingEvent struct {

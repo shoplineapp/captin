@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	"github.com/shoplineapp/captin/models"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	"github.com/shoplineapp/captin/v2/models"
 
 	lock "github.com/bsm/redis-lock"
 	"github.com/go-redis/redis"

@@ -1,11 +1,13 @@
 package dispatcher_delayers_test
 
 import (
-	"github.com/stretchr/testify/assert"
+	"context"
 	"testing"
 
-	. "github.com/shoplineapp/captin/dispatcher/delayers"
-	models "github.com/shoplineapp/captin/models"
+	"github.com/stretchr/testify/assert"
+
+	. "github.com/shoplineapp/captin/v2/dispatcher/delayers"
+	models "github.com/shoplineapp/captin/v2/models"
 )
 
 func TestGoroutineDelayer_Execute(t *testing.T) {
@@ -21,6 +23,6 @@ func TestGoroutineDelayer_Execute(t *testing.T) {
 		},
 	}
 	delayer := GoroutineDelayer{}
-	delayer.Execute(evt, dest, callback)
+	delayer.Execute(context.Background(), evt, dest, callback)
 	assert.Equal(t, true, isCallbackCalled)
 }

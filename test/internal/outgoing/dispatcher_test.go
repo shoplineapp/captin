@@ -1,6 +1,7 @@
 package outgoing_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,15 +9,14 @@ import (
 	"reflect"
 	"testing"
 	"time"
-	"unsafe"
 
-	delayers "github.com/shoplineapp/captin/dispatcher/delayers"
-	captin_errors "github.com/shoplineapp/captin/errors"
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	outgoing "github.com/shoplineapp/captin/internal/outgoing"
-	stores "github.com/shoplineapp/captin/internal/stores"
-	models "github.com/shoplineapp/captin/models"
-	mocks "github.com/shoplineapp/captin/test/mocks"
+	delayers "github.com/shoplineapp/captin/v2/dispatcher/delayers"
+	captin_errors "github.com/shoplineapp/captin/v2/errors"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	outgoing "github.com/shoplineapp/captin/v2/internal/outgoing"
+	stores "github.com/shoplineapp/captin/v2/internal/stores"
+	models "github.com/shoplineapp/captin/v2/models"
+	mocks "github.com/shoplineapp/captin/v2/test/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -59,12 +59,12 @@ func hasDocument(e models.IncomingEvent) bool {
 func TestDispatchEvents_Error(t *testing.T) {
 	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.json")
 
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(errors.New("Mock Error"))
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("Mock Error"))
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -72,7 +72,7 @@ func TestDispatchEvents_Error(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 2},
@@ -87,12 +87,12 @@ func TestDispatchEvents_Error(t *testing.T) {
 func TestDispatchEvents_SendEvent_WithNotDispatcherError(t *testing.T) {
 	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.json")
 
-	sender.On("SendEvent", mock.Anything, mock.Anything).Panic("Non-dispatcher panic")
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Panic("Non-dispatcher panic")
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -100,7 +100,7 @@ func TestDispatchEvents_SendEvent_WithNotDispatcherError(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 2},
@@ -115,12 +115,12 @@ func TestDispatchEvents_SendEvent_WithNotDispatcherError(t *testing.T) {
 func TestDispatchEvents(t *testing.T) {
 	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.json")
 
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -128,7 +128,7 @@ func TestDispatchEvents(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 2},
@@ -142,14 +142,14 @@ func TestDispatchEvents(t *testing.T) {
 func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
 	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.single.json")
 
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil).Once()
-	store.On("Get", mock.Anything).Return("", true, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	store.On("Remove", mock.Anything).Return(true, nil)
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil).Once()
+	store.On("Get", mock.Anything, mock.Anything).Return("", true, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	store.On("Remove", mock.Anything, mock.Anything).Return(true, nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -161,8 +161,8 @@ func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
 
 	throttleID := "product.update.service_one.product_id-data"
 	throttlePeriod := time.Millisecond * 500 * 2
-	store.AssertCalled(t, "Get", throttleID)
-	store.AssertCalled(t, "Set", throttleID, `{"control":null,"event_key":"product.update","payload":{"field1":1},"source":"core","target_id":"product_id","target_type":"Product","trace_id":""}`, throttlePeriod)
+	store.AssertCalled(t, "Get", mock.Anything, throttleID)
+	store.AssertCalled(t, "Set", mock.Anything, throttleID, `{"control":null,"distributed_tracing_info":{},"event_key":"product.update","payload":{"field1":1},"source":"core","target_id":"product_id","target_type":"Product","trace_id":""}`, throttlePeriod)
 
 	time.Sleep(600 * time.Millisecond)
 
@@ -172,14 +172,14 @@ func TestDispatchEvents_Throttled_DelaySend(t *testing.T) {
 func TestDispatchEvents_Delayer_Send(t *testing.T) {
 	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.delay.json")
 	dispatcher.SetDelayer(&delayers.GoroutineDelayer{})
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 1*time.Millisecond, nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil).Twice()
-	store.On("Get", mock.Anything).Return("", true, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	store.On("Remove", mock.Anything).Return(true, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(false, 1*time.Millisecond, nil)
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil).Twice()
+	store.On("Get", mock.Anything, mock.Anything).Return("", true, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	store.On("Remove", mock.Anything, mock.Anything).Return(true, nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -198,13 +198,13 @@ func TestDispatchEvents_Throttled_SkipUpdatingValue(t *testing.T) {
 	throttleID := "product.update.service_one.product_id-data"
 	throttlePeriod := time.Millisecond * 700 * 2
 
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
-	store.On("Get", throttleID).Return(`{"event_key":"product.update","source":"core","payload":{"field1":1},"control":{"ts":"99999999999999"},"target_type":"Product","target_id":"product_id"}`, true, throttlePeriod, nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	store.On("Update", mock.Anything, mock.Anything).Return(true, nil)
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, time.Millisecond*700, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	store.On("Get", mock.Anything, throttleID).Return(`{"event_key":"product.update","source":"core","payload":{"field1":1},"control":{"ts":"99999999999999"},"target_type":"Product","target_id":"product_id"}`, true, throttlePeriod, nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	store.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(false, time.Millisecond*700, nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 2},
@@ -216,7 +216,7 @@ func TestDispatchEvents_Throttled_SkipUpdatingValue(t *testing.T) {
 	// Expecting update of store is skipped due to older timestamp from new incoming event
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
 	store.AssertNumberOfCalls(t, "Update", 0)
-	store.AssertCalled(t, "Get", throttleID)
+	store.AssertCalled(t, "Get", mock.Anything, throttleID)
 }
 
 func TestDispatchEvents_Throttled_UpdatePayload(t *testing.T) {
@@ -224,14 +224,14 @@ func TestDispatchEvents_Throttled_UpdatePayload(t *testing.T) {
 	throttleID := "product.update.service_one.product_id-data"
 	throttlePeriod := time.Millisecond * 700 * 2
 
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
-	store.On("Get", throttleID).Return(`{"event_key":"product.update","source":"core","payload":{"field1":1},"control":null,"target_type":"Product","target_id":"product_id"}`, true, throttlePeriod, nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	store.On("Update", mock.Anything, mock.Anything).Return(true, nil)
-	store.On("Remove", mock.Anything).Return(true, nil)
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, time.Millisecond*700, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	store.On("Get", mock.Anything, throttleID).Return(`{"event_key":"product.update","source":"core","payload":{"field1":1},"control":null,"target_type":"Product","target_id":"product_id"}`, true, throttlePeriod, nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	store.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	store.On("Remove", mock.Anything, mock.Anything).Return(true, nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(false, time.Millisecond*700, nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 2},
@@ -240,21 +240,21 @@ func TestDispatchEvents_Throttled_UpdatePayload(t *testing.T) {
 	}, store, throttler, documentStores)
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
-	store.AssertCalled(t, "Get", throttleID)
-	store.AssertCalled(t, "Update", throttleID, `{"control":null,"event_key":"product.update","payload":{"field1":2},"source":"core","target_id":"product_id","target_type":"Product","trace_id":""}`)
+	store.AssertCalled(t, "Get", mock.Anything, throttleID)
+	store.AssertCalled(t, "Update", mock.Anything, throttleID, `{"control":null,"distributed_tracing_info":{},"event_key":"product.update","payload":{"field1":2},"source":"core","target_id":"product_id","target_type":"Product","trace_id":""}`)
 }
 
 func TestDispatchEvents_Throttled_KeepThrottledPayloads(t *testing.T) {
 	_, documentStores, sender, dispatcher, throttler := setup("fixtures/config.keep_throttled_payloads.json")
 	store := stores.NewMemoryStore()
 
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	throttleID := "product.update.service_one.product_id-data"
 	throttlePayloadsID := "product.update.service_one.product_id-throttled_payloads"
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -262,21 +262,21 @@ func TestDispatchEvents_Throttled_KeepThrottledPayloads(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	throttledPayloads, _, _, _ := store.GetQueue(throttlePayloadsID)
+	throttledPayloads, _, _, _ := store.GetQueue(context.Background(), throttlePayloadsID)
 	assert.Equal(t, len(throttledPayloads), 1)
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
 
 	time.Sleep(600 * time.Millisecond)
 
-	sender.AssertCalled(t, "SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+	sender.AssertCalled(t, "SendEvent", mock.Anything, mock.MatchedBy(func(e models.IncomingEvent) bool {
 		return fmt.Sprint(e.ThrottledPayloads) == fmt.Sprint([]map[string]interface{}{
 			{"field1": 1},
 		})
 	}), mock.Anything)
 
-	_, storedEventExists, _, _ := store.Get(throttleID)
-	throttledPayloads, _, _, _ = store.GetQueue(throttlePayloadsID)
+	_, storedEventExists, _, _ := store.Get(context.Background(), throttleID)
+	throttledPayloads, _, _, _ = store.GetQueue(context.Background(), throttlePayloadsID)
 	assert.Equal(t, false, storedEventExists)
 	assert.Equal(t, 0, len(throttledPayloads))
 }
@@ -285,13 +285,15 @@ func TestDispatchEvents_Throttled_KeepThrottledPayloads_Multiple(t *testing.T) {
 	_, documentStores, sender, dispatcher, throttler := setup("fixtures/config.keep_throttled_payloads.json")
 	store := stores.NewMemoryStore()
 
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	throttleID := "product.update.service_one.product_id-data"
 	throttlePayloadsID := "product.update.service_one.product_id-throttled_payloads"
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher2 := *dispatcher
+
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -299,7 +301,7 @@ func TestDispatchEvents_Throttled_KeepThrottledPayloads_Multiple(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher2.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 2},
@@ -307,7 +309,7 @@ func TestDispatchEvents_Throttled_KeepThrottledPayloads_Multiple(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	throttledPayloads, _, _, _ := store.GetQueue(throttlePayloadsID)
+	throttledPayloads, _, _, _ := store.GetQueue(context.Background(), throttlePayloadsID)
 	assert.Equal(t, 2, len(throttledPayloads))
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
@@ -315,7 +317,7 @@ func TestDispatchEvents_Throttled_KeepThrottledPayloads_Multiple(t *testing.T) {
 	time.Sleep(600 * time.Millisecond)
 
 	// it should SendEvent with 2 throttled payloads
-	sender.AssertCalled(t, "SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+	sender.AssertCalled(t, "SendEvent", mock.Anything, mock.MatchedBy(func(e models.IncomingEvent) bool {
 		return fmt.Sprint(e.ThrottledPayloads) == fmt.Sprint([]map[string]interface{}{
 			{"field1": 1},
 			{"field1": 2},
@@ -323,13 +325,13 @@ func TestDispatchEvents_Throttled_KeepThrottledPayloads_Multiple(t *testing.T) {
 	}), mock.Anything)
 
 	// it should SendEvent with last payload
-	sender.AssertCalled(t, "SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+	sender.AssertCalled(t, "SendEvent", mock.Anything, mock.MatchedBy(func(e models.IncomingEvent) bool {
 		return fmt.Sprint(e.Payload) == fmt.Sprint(map[string]interface{}{"field1": 2})
 	}), mock.Anything)
 
 	// it should clean up after sendEvent
-	_, storedEventExists, _, _ := store.Get(throttleID)
-	throttledPayloads, _, _, _ = store.GetQueue(throttlePayloadsID)
+	_, storedEventExists, _, _ := store.Get(context.Background(), throttleID)
+	throttledPayloads, _, _, _ = store.GetQueue(context.Background(), throttlePayloadsID)
 	assert.Equal(t, false, storedEventExists)
 	assert.Equal(t, 0, len(throttledPayloads))
 }
@@ -340,37 +342,37 @@ func TestDispatchEvents_Throttled_KeepThrottledDocuments(t *testing.T) {
 
 	mockDocumentStore := new(mocks.DocumentStoreMock)
 	documentStores["default"] = mockDocumentStore
-	mockDocumentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{"foo": "bar"})
+	mockDocumentStore.On("GetDocument", mock.Anything, mock.Anything).Return(map[string]interface{}{"foo": "bar"})
 
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	throttleID := "product.update.service_one.product_id-data"
 	throttleDocumentsID := "product.update.service_one.product_id-throttled_documents"
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		TargetType: "Product",
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	throttledDocuments, _, _, _ := store.GetQueue(throttleDocumentsID)
+	throttledDocuments, _, _, _ := store.GetQueue(context.Background(), throttleDocumentsID)
 	assert.Equal(t, 1, len(throttledDocuments))
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
 
 	time.Sleep(600 * time.Millisecond)
 
-	sender.AssertCalled(t, "SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+	sender.AssertCalled(t, "SendEvent", mock.Anything, mock.MatchedBy(func(e models.IncomingEvent) bool {
 		return fmt.Sprint(e.ThrottledDocuments) == fmt.Sprint([]map[string]interface{}{
 			{"foo": "bar"},
 		})
 	}), mock.Anything)
 
 	// it should clean up after sendEvent
-	_, storedEventExists, _, _ := store.Get(throttleID)
-	throttledDocuments, _, _, _ = store.GetQueue(throttleDocumentsID)
+	_, storedEventExists, _, _ := store.Get(context.Background(), throttleID)
+	throttledDocuments, _, _, _ = store.GetQueue(context.Background(), throttleDocumentsID)
 	assert.Equal(t, false, storedEventExists)
 	assert.Equal(t, 0, len(throttledDocuments))
 }
@@ -381,42 +383,43 @@ func TestDispatchEvents_Throttled_KeepThrottledDocuments_Multiple(t *testing.T) 
 
 	mockDocumentStore := new(mocks.DocumentStoreMock)
 	documentStores["default"] = mockDocumentStore
-	mockDocumentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{"foo": "bar1"}).Once()
-	mockDocumentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{"foo": "bar2"})
+	mockDocumentStore.On("GetDocument", mock.Anything, mock.Anything).Return(map[string]interface{}{"foo": "bar1"}).Once()
+	mockDocumentStore.On("GetDocument", mock.Anything, mock.Anything).Return(map[string]interface{}{"foo": "bar2"})
 
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	throttleID := "product.update.service_one.product_id-data"
 	throttleDocumentsID := "product.update.service_one.product_id-throttled_documents"
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	// In Captain we are not reusing dispatcher for dispatcher.Dispatch
+	// (it should not be re-used anyway as there are states like Errors and targetDocument)
+	// If we reuse the same dispatcher in test case, it fails with data race, which won't happen in production
+	// So we copy the dispatcher (with the same stores)
+	dispatcher2 := *dispatcher
+
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		TargetType: "Product",
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	// clear cache in dispatcher.targetDocument private field
-	// src: https://gist.github.com/CyberLight/1da35b4e0093bc12302f
-	ptrToTargetDocument := (*interface{})(unsafe.Pointer(reflect.Indirect(reflect.ValueOf(dispatcher)).FieldByName("targetDocument").UnsafeAddr()))
-	*ptrToTargetDocument = nil
-
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher2.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		TargetType: "Product",
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	throttledDocuments, _, _, _ := store.GetQueue(throttleDocumentsID)
+	throttledDocuments, _, _, _ := store.GetQueue(context.Background(), throttleDocumentsID)
 	assert.Equal(t, 2, len(throttledDocuments))
 
 	sender.AssertNumberOfCalls(t, "SendEvent", 0)
 
 	time.Sleep(600 * time.Millisecond)
 
-	sender.AssertCalled(t, "SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+	sender.AssertCalled(t, "SendEvent", mock.Anything, mock.MatchedBy(func(e models.IncomingEvent) bool {
 		return fmt.Sprint(e.ThrottledDocuments) == fmt.Sprint([]map[string]interface{}{
 			{"foo": "bar1"},
 			{"foo": "bar2"},
@@ -424,8 +427,8 @@ func TestDispatchEvents_Throttled_KeepThrottledDocuments_Multiple(t *testing.T) 
 	}), mock.Anything)
 
 	// it should clean up after sendEvent
-	_, storedEventExists, _, _ := store.Get(throttleID)
-	throttledDocuments, _, _, _ = store.GetQueue(throttleDocumentsID)
+	_, storedEventExists, _, _ := store.Get(context.Background(), throttleID)
+	throttledDocuments, _, _, _ = store.GetQueue(context.Background(), throttleDocumentsID)
 	assert.Equal(t, false, storedEventExists)
 	assert.Equal(t, 0, len(throttledDocuments))
 }
@@ -435,15 +438,15 @@ func TestDispatchEvents_With_Document(t *testing.T) {
 	mockDocumentStore := new(mocks.DocumentStoreMock)
 	documentStores["default"] = mockDocumentStore
 
-	sender.On("SendEvent", mock.MatchedBy(hasDocument), mock.Anything).Return(nil)
-	sender.On("SendEvent", mock.MatchedBy(hasNoDocument), mock.Anything).Return(nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	mockDocumentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{"foo": "bar"})
+	sender.On("SendEvent", mock.Anything, mock.MatchedBy(hasDocument), mock.Anything).Return(nil)
+	sender.On("SendEvent", mock.Anything, mock.MatchedBy(hasNoDocument), mock.Anything).Return(nil)
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	mockDocumentStore.On("GetDocument", mock.Anything, mock.Anything).Return(map[string]interface{}{"foo": "bar"})
 
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -459,16 +462,17 @@ func TestDispatchEvents_With_Include_Document_Attrs(t *testing.T) {
 	mockDocumentStore := new(mocks.DocumentStoreMock)
 	documentStores["default"] = mockDocumentStore
 
-	sender.On("SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+	sender.On("SendEvent", mock.Anything, mock.MatchedBy(func(e models.IncomingEvent) bool {
 		return reflect.DeepEqual(e.TargetDocument, map[string]interface{}{"foo": map[string]interface{}{"bar": "yo"}})
 	}), mock.Anything).Return(nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil)
+	throttler.On("CanTriggerWithCtx", mock.Anything, mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
 	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	mockDocumentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{"foo": map[string]interface{}{"bar": "yo", "a": "b"}, "foo2": "bar2"})
+	mockDocumentStore.On("GetDocument", mock.Anything, mock.Anything).Return(map[string]interface{}{"foo": map[string]interface{}{"bar": "yo", "a": "b"}, "foo2": "bar2"})
 
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -484,16 +488,16 @@ func TestDispatchEvents_With_Exclude_Document_Attrs(t *testing.T) {
 	mockDocumentStore := new(mocks.DocumentStoreMock)
 	documentStores["default"] = mockDocumentStore
 
-	sender.On("SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+	sender.On("SendEvent", mock.Anything, mock.MatchedBy(func(e models.IncomingEvent) bool {
 		return reflect.DeepEqual(e.TargetDocument, map[string]interface{}{"foo": map[string]interface{}{"a": "b"}, "foo2": "bar2"})
 	}), mock.Anything).Return(nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	mockDocumentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{"foo": map[string]interface{}{"bar": "yo", "a": "b"}, "foo2": "bar2"})
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	mockDocumentStore.On("GetDocument", mock.Anything, mock.Anything).Return(map[string]interface{}{"foo": map[string]interface{}{"bar": "yo", "a": "b"}, "foo2": "bar2"})
 
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -507,15 +511,15 @@ func TestDispatchEvents_With_Exclude_Document_Attrs(t *testing.T) {
 func TestDispatchEvents_With_Include_Payload_Attrs(t *testing.T) {
 	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.include_payload_attrs.json")
 
-	sender.On("SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+	sender.On("SendEvent", mock.Anything, mock.MatchedBy(func(e models.IncomingEvent) bool {
 		return reflect.DeepEqual(e.Payload, map[string]interface{}{"field1": 1})
 	}), mock.Anything).Return(nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1, "field2": 2},
@@ -529,15 +533,15 @@ func TestDispatchEvents_With_Include_Payload_Attrs(t *testing.T) {
 func TestDispatchEvents_With_Exclude_Payload_Attrs(t *testing.T) {
 	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.exclude_payload_attrs.json")
 
-	sender.On("SendEvent", mock.MatchedBy(func(e models.IncomingEvent) bool {
+	sender.On("SendEvent", mock.Anything, mock.MatchedBy(func(e models.IncomingEvent) bool {
 		return reflect.DeepEqual(e.Payload, map[string]interface{}{"field2": 2})
 	}), mock.Anything).Return(nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1, "field2": 2},
@@ -555,16 +559,16 @@ func TestDispatchEvents_WithSpecificDocumentStore(t *testing.T) {
 	documentStores["specific"] = anotherDocumentStore
 	documentStores["default"] = defaultDocumentStore
 
-	sender.On("SendEvent", mock.MatchedBy(hasDocument), mock.Anything).Return(nil)
+	sender.On("SendEvent", mock.Anything, mock.MatchedBy(hasDocument), mock.Anything).Return(nil)
 	// sender.On("SendEvent", mock.MatchedBy(hasNoDocument), mock.Anything).Return(nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	defaultDocumentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{"foo": "bar"})
-	anotherDocumentStore.On("GetDocument", mock.Anything).Return(map[string]interface{}{"foo": "bar"})
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	defaultDocumentStore.On("GetDocument", mock.Anything, mock.Anything).Return(map[string]interface{}{"foo": "bar"})
+	anotherDocumentStore.On("GetDocument", mock.Anything, mock.Anything).Return(map[string]interface{}{"foo": "bar"})
 
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -578,15 +582,15 @@ func TestDispatchEvents_WithSpecificDocumentStore(t *testing.T) {
 func TestDispatchEvents_Throttled_Without_TrailingEdge(t *testing.T) {
 	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.throttle.disable_trailing.json")
 
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	store.On("Remove", mock.Anything).Return(true, nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	store.On("Remove", mock.Anything, mock.Anything).Return(true, nil)
 
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, 500*time.Millisecond, nil).Once()
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil).Twice()
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(true, 500*time.Millisecond, nil).Once()
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(false, 500*time.Millisecond, nil).Twice()
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -594,7 +598,7 @@ func TestDispatchEvents_Throttled_Without_TrailingEdge(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -602,7 +606,7 @@ func TestDispatchEvents_Throttled_Without_TrailingEdge(t *testing.T) {
 		TargetId:   "product_id",
 	}, store, throttler, documentStores)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -619,6 +623,7 @@ func TestDispatchEvents_OnError(t *testing.T) {
 	_, _, _, dispatcher, _ := setup("fixtures/config.single.json")
 
 	dispatcher.OnError(
+		context.Background(),
 		models.IncomingEvent{
 			Key:        "product.update",
 			Source:     "core",
@@ -635,12 +640,12 @@ func TestDispatchEvents_DispatchErrorTriggerOnError(t *testing.T) {
 
 	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.single.json")
 
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(errors.New("Mock Error"))
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("Mock Error"))
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(true, time.Duration(0), nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core",
 		Payload:    map[string]interface{}{"field1": 1},
@@ -658,12 +663,12 @@ func TestDispatchEvents_DispatchErrorTriggerOnError(t *testing.T) {
 func TestDispatchEvents_DelaySend_NotExist(t *testing.T) {
 	store, documentStores, sender, dispatcher, throttler := setup("fixtures/config.single.json")
 
-	sender.On("SendEvent", mock.Anything, mock.Anything).Return(nil)
-	store.On("Get", mock.Anything).Return("", false, time.Duration(0), nil)
-	store.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-	throttler.On("CanTrigger", mock.Anything, mock.Anything).Return(false, time.Duration(0), nil)
+	sender.On("SendEvent", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	store.On("Get", mock.Anything, mock.Anything).Return("", false, time.Duration(0), nil)
+	store.On("Set", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+	throttler.On("CanTrigger", mock.Anything, mock.Anything, mock.Anything).Return(false, time.Duration(0), nil)
 
-	dispatcher.Dispatch(models.IncomingEvent{
+	dispatcher.Dispatch(context.Background(), models.IncomingEvent{
 		Key:        "product.update",
 		Source:     "core-api",
 		Payload:    map[string]interface{}{"field1": 1},

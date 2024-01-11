@@ -1,19 +1,20 @@
 package core
 
 import (
+	"context"
 	"fmt"
 
-	destination_filters "github.com/shoplineapp/captin/destinations/filters"
-	d "github.com/shoplineapp/captin/dispatcher"
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	outgoing "github.com/shoplineapp/captin/internal/outgoing"
-	models "github.com/shoplineapp/captin/models"
-	senders "github.com/shoplineapp/captin/senders"
+	destination_filters "github.com/shoplineapp/captin/v2/destinations/filters"
+	d "github.com/shoplineapp/captin/v2/dispatcher"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	outgoing "github.com/shoplineapp/captin/v2/internal/outgoing"
+	models "github.com/shoplineapp/captin/v2/models"
+	senders "github.com/shoplineapp/captin/v2/senders"
 
-	captin_errors "github.com/shoplineapp/captin/errors"
-	documentStores "github.com/shoplineapp/captin/internal/document_stores"
-	stores "github.com/shoplineapp/captin/internal/stores"
-	throttles "github.com/shoplineapp/captin/internal/throttles"
+	captin_errors "github.com/shoplineapp/captin/v2/errors"
+	documentStores "github.com/shoplineapp/captin/v2/internal/document_stores"
+	stores "github.com/shoplineapp/captin/v2/internal/stores"
+	throttles "github.com/shoplineapp/captin/v2/internal/throttles"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -116,7 +117,7 @@ func (c Captin) IsRunning() bool {
 }
 
 // Execute - Execute for events
-func (c *Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfaces.ErrorInterface) {
+func (c *Captin) Execute(ctx context.Context, ie interfaces.IncomingEventInterface) (bool, []interfaces.ErrorInterface) {
 	c.Status = STATUS_RUNNING
 
 	e := ie.(models.IncomingEvent)
@@ -131,7 +132,7 @@ func (c *Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfac
 		destinations = append(destinations, models.Destination{Config: config})
 	}
 
-	destinations = outgoing.Custom{}.Sift(&e, destinations, c.filters, c.middlewares)
+	destinations = outgoing.Custom{}.Sift(ctx, &e, destinations, c.filters, c.middlewares)
 	cLogger.WithFields(log.Fields{
 		"event":        e,
 		"destinations": destinations,
@@ -143,7 +144,7 @@ func (c *Captin) Execute(ie interfaces.IncomingEventInterface) (bool, []interfac
 	dispatcher.SetMiddlewares(c.dispatchMiddlewares)
 	dispatcher.SetErrorHandler(c.dispatchErrorHandler)
 	dispatcher.SetDelayer(c.dispatchDelayer)
-	dispatcher.Dispatch(e, c.store, c.throttler, c.DocumentStoreMapping)
+	dispatcher.Dispatch(ctx, e, c.store, c.throttler, c.DocumentStoreMapping)
 
 	errors := dispatcher.GetErrors()
 

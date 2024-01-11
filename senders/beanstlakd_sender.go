@@ -1,6 +1,7 @@
 package senders
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -10,9 +11,9 @@ import (
 
 	beanstalk "github.com/beanstalkd/go-beanstalk"
 	statsd "github.com/joeycumines/statsd"
-	captin_errors "github.com/shoplineapp/captin/errors"
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/models"
+	captin_errors "github.com/shoplineapp/captin/v2/errors"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	models "github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -29,7 +30,7 @@ type BeanstalkdSender struct {
 }
 
 // SendEvent - #BeanstalkdSender SendEvent
-func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) error {
+func (c *BeanstalkdSender) SendEvent(ctx context.Context, ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) (err error) {
 	e := ev.(models.IncomingEvent)
 	d := dv.(models.Destination)
 

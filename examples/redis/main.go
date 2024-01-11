@@ -10,8 +10,8 @@ import (
 	incoming "redis_example/incoming"
 	stores "redis_example/stores"
 
-	core "github.com/shoplineapp/captin/core"
-	"github.com/shoplineapp/captin/models"
+	core "github.com/shoplineapp/captin/v2/core"
+	"github.com/shoplineapp/captin/v2/models"
 )
 
 func main() {

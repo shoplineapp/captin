@@ -1,10 +1,12 @@
 package destination_filters
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/robertkrimen/otto"
-	models "github.com/shoplineapp/captin/models"
+	models "github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -14,7 +16,7 @@ type ValidateFilter struct {
 	DestinationFilterInterface
 }
 
-func (f ValidateFilter) Run(e models.IncomingEvent, d models.Destination) (bool, error) {
+func (f ValidateFilter) Run(ctx context.Context, e models.IncomingEvent, d models.Destination) (bool, error) {
 	payloadJson, _ := json.Marshal(e.Payload)
 	configJson, _ := json.Marshal(d.Config)
 	template := fmt.Sprintf(
@@ -39,6 +41,6 @@ func (f ValidateFilter) Run(e models.IncomingEvent, d models.Destination) (bool,
 	return valid, err
 }
 
-func (f ValidateFilter) Applicable(e models.IncomingEvent, d models.Destination) bool {
+func (f ValidateFilter) Applicable(ctx context.Context, e models.IncomingEvent, d models.Destination) bool {
 	return (d.Config.GetValidate()) != ""
 }

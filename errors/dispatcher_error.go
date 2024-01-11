@@ -2,8 +2,9 @@ package errors
 
 import (
 	"fmt"
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/models"
+
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	models "github.com/shoplineapp/captin/v2/models"
 )
 
 // DispatcherError - Error when send events
