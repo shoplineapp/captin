@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/mohae/deepcopy"
@@ -35,6 +36,8 @@ type Dispatcher struct {
 
 	muTargetDocument sync.Mutex
 	muErrors         sync.Mutex
+
+	dispatchCalled atomic.Bool
 }
 
 // NewDispatcherWithDestinations - Create Outgoing event dispatcher with destinations
@@ -94,6 +97,9 @@ func (d *Dispatcher) OnError(ctx context.Context, evt interfaces.IncomingEventIn
 }
 
 // Dispatch - Dispatch an event to outgoing webhook
+// NOTE:
+// This function should not be called more than once, as it alters the object state (e.g. errors, caches)
+// Subsequence calls should construct a new instance of Dispatcher.
 func (d *Dispatcher) Dispatch(
 	ctx context.Context,
 	event interfaces.IncomingEventInterface,
@@ -101,8 +107,13 @@ func (d *Dispatcher) Dispatch(
 	throttler interfaces.ThrottleInterface,
 	documentStoreMappings map[string]interfaces.DocumentStoreInterface,
 ) interfaces.ErrorInterface {
-	responses := make(chan int, len(d.destinations))
 	e := event.(models.IncomingEvent)
+	alreadyCalled := d.dispatchCalled.CompareAndSwap(false, true)
+	if alreadyCalled {
+		dLogger.WithField("event", e).Warn("Triggering dispatch more than once")
+	}
+	d.dispatchCalled.Store(true)
+	responses := make(chan int, len(d.destinations))
 	for _, destination := range d.destinations {
 		config := destination.Config
 		canTrigger, timeRemain, err := throttler.CanTrigger(ctx, getEventKey(ctx, store, e, destination), config.GetThrottleValue())
