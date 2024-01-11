@@ -268,8 +268,8 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Msg)
 			d.OnError(ctx, e, err)
-			span.End()
 		}
+		span.End()
 	}()
 
 	// Check if store have payload
@@ -293,7 +293,6 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 			"eventDataKey": "dataKey",
 		}).Debug("Skipping update on event data")
 		span.AddEvent("Skipping update on event data")
-		span.End()
 		return
 	}
 
@@ -353,7 +352,9 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 		}
 
 		// Schedule send event later
+		span.SetAttributes(attribute.Int("delay_milliseconds", int(timeRemain.Milliseconds())))
 		dispatcher.TrackAfterFuncJob(timeRemain, func() {
+			ctx, span := helpers.Tracer().Start(ctx, "captin.processDelayedEvent.AfterFunc")
 			defer span.End()
 			dLogger.WithFields(log.Fields{"key": dataKey}).Debug("After event callback")
 			payload, exists, _, _ := store.Get(ctx, dataKey)
