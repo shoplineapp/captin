@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 
 	log "github.com/sirupsen/logrus"
-	interfaces "github.com/shoplineapp/captin/interfaces"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
 )
 
 var cmLogger = log.WithFields(log.Fields{"class": "ConfigurationMapper"})

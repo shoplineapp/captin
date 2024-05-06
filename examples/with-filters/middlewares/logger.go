@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"fmt"
-	models "github.com/shoplineapp/captin/models"
+	models "github.com/shoplineapp/captin/v2/models"
 )
 
 type LoggerMiddleware struct{}

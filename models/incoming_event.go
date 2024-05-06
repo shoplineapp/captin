@@ -9,18 +9,24 @@ import (
 
 	"github.com/google/uuid"
 
-	interfaces "github.com/shoplineapp/captin/interfaces"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
 )
 
-type IncomingEvent struct {
-	interfaces.IncomingEventInterface
+var _ interfaces.IncomingEventInterface = IncomingEvent{}
 
-	TraceId           string                   `json:"trace_id"`
-	Key               string                   `json:"event_key"`                    // Required, The identifier of an event, usually form as PREFIX.MODEL.ACTION
-	Source            string                   `json:"source"`                       // Required, Event source from
-	Payload           map[string]interface{}   `json:"payload"`                      // Optional, custom payload / document from caller
-	ThrottledPayloads []map[string]interface{} `json:"throttled_payloads,omitempty"` // for response only
-	Control           map[string]interface{}   `json:"control"`                      // Optional, custom control values from caller
+type IncomingEvent struct {
+	// Note:
+	// this `TraceID` is NOT the OpenTelemetry trace ID, but more like a message ID which persist across message retries
+	// We keep this for backward compatibility
+	// For OpenTelemetry trace ID, see DistributedTracingInfo
+	TraceId string `json:"trace_id"`
+
+	Key                    string                   `json:"event_key"`                    // Required, The identifier of an event, usually form as PREFIX.MODEL.ACTION
+	Source                 string                   `json:"source"`                       // Required, Event source from
+	Payload                map[string]interface{}   `json:"payload"`                      // Optional, custom payload / document from caller
+	ThrottledPayloads      []map[string]interface{} `json:"throttled_payloads,omitempty"` // for response only
+	Control                map[string]interface{}   `json:"control"`                      // Optional, custom control values from caller
+	DistributedTracingInfo DistributedTracingInfo   `json:"distributed_tracing_info"`     // Optional, for distributed tracing (e.g. OpenTelemetry)
 
 	// Optional with payload, Captin will try to fetch the document from the default database
 	TargetType         string                   `json:"target_type"`

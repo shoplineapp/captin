@@ -1,16 +1,18 @@
 package senders_test
 
 import (
-	"os"
+	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"testing"
 
 	aws "github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	aws_sqs "github.com/aws/aws-sdk-go/service/sqs"
 	aws_sqsiface "github.com/aws/aws-sdk-go/service/sqs/sqsiface"
-	models "github.com/shoplineapp/captin/models"
-	. "github.com/shoplineapp/captin/senders"
+	models "github.com/shoplineapp/captin/v2/models"
+	. "github.com/shoplineapp/captin/v2/senders"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -22,7 +24,7 @@ type sqsMock struct {
 	SentMessages []aws_sqs.SendMessageInput
 }
 
-func (s *sqsMock) SendMessage(input *aws_sqs.SendMessageInput) (*aws_sqs.SendMessageOutput, error) {
+func (s *sqsMock) SendMessageWithContext(ctx context.Context, input *aws_sqs.SendMessageInput, _ ...request.Option) (*aws_sqs.SendMessageOutput, error) {
 	if s.SentMessages == nil {
 		s.SentMessages = []aws_sqs.SendMessageInput{}
 	}
@@ -44,10 +46,11 @@ func TestSqsSender_SendEvent_Success(t *testing.T) {
 	sender := NewSqsSender(awsConfig)
 
 	sqs := new(sqsMock)
-	sqs.On("SendMessage", mock.Anything).Return(nil)
+	sqs.On("SendMessageWithContext", mock.Anything, mock.Anything).Return(nil)
 
 	sender.DefaultClient = sqs
 	result := sender.SendEvent(
+		context.Background(),
 		models.IncomingEvent{},
 		models.Destination{
 			Config: models.Configuration{},
@@ -55,7 +58,7 @@ func TestSqsSender_SendEvent_Success(t *testing.T) {
 	)
 
 	assert.Nil(t, result)
-	sqs.AssertNumberOfCalls(t, "SendMessage", 1)
+	sqs.AssertNumberOfCalls(t, "SendMessageWithContext", 1)
 }
 
 func TestSqsSender_SendEvent_Failed(t *testing.T) {
@@ -63,10 +66,11 @@ func TestSqsSender_SendEvent_Failed(t *testing.T) {
 	sender := NewSqsSender(awsConfig)
 
 	sqs := new(sqsMock)
-	sqs.On("SendMessage", mock.Anything).Return(nil)
+	sqs.On("SendMessageWithContext", mock.Anything, mock.Anything).Return(nil)
 
 	sender.DefaultClient = sqs
 	result := sender.SendEvent(
+		context.Background(),
 		models.IncomingEvent{Control: map[string]interface{}{"result": "failed"}},
 		models.Destination{
 			Config: models.Configuration{Name: "failed"},
@@ -74,16 +78,15 @@ func TestSqsSender_SendEvent_Failed(t *testing.T) {
 	)
 
 	assert.Error(t, result, "some error")
-	sqs.AssertNumberOfCalls(t, "SendMessage", 1)
+	sqs.AssertNumberOfCalls(t, "SendMessageWithContext", 1)
 }
-
 
 func TestSqsSender_GetClient_UseAccessKey_WithCorrectAwsConfig(t *testing.T) {
 	awsConfig := aws.Config{Region: aws.String("ap-southeast-1")}
 	sender := NewSqsSender(awsConfig)
 
 	sqs := new(sqsMock)
-	sqs.On("SendMessage", mock.Anything).Return(nil)
+	sqs.On("SendMessageWithContext", mock.Anything, mock.Anything).Return(nil)
 
 	os.Setenv("HOOK_TEST_DESTINATION_CALLBACK_URL", "https://sqs.ap-southeast-1.amazonaws.com/000000000000/queue")
 	os.Setenv("HOOK_TEST_DESTINATION_SQS_SENDER_USE_CUSTOM_CONFIG", "true")
@@ -116,11 +119,12 @@ func TestSqsSender_SendEvent_UseAccessKey_Success(t *testing.T) {
 	sender := NewSqsSender(awsConfig)
 
 	sqs := new(sqsMock)
-	sqs.On("SendMessage", mock.Anything).Return(nil)
+	sqs.On("SendMessageWithContext", mock.Anything, mock.Anything).Return(nil)
 
 	sender.DestinationClientMap["test_destination"] = sqs
 
 	result := sender.SendEvent(
+		context.Background(),
 		models.IncomingEvent{},
 		models.Destination{
 			Config: models.Configuration{
@@ -130,5 +134,5 @@ func TestSqsSender_SendEvent_UseAccessKey_Success(t *testing.T) {
 	)
 
 	assert.Nil(t, result)
-	sqs.AssertNumberOfCalls(t, "SendMessage", 1)
+	sqs.AssertNumberOfCalls(t, "SendMessageWithContext", 1)
 }

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shoplineapp/captin/dispatcher"
+	"github.com/shoplineapp/captin/v2/dispatcher"
 	"github.com/stretchr/testify/assert"
 )
 

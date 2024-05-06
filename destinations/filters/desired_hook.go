@@ -1,7 +1,9 @@
 package destination_filters
 
 import (
-	models "github.com/shoplineapp/captin/models"
+	"context"
+
+	models "github.com/shoplineapp/captin/v2/models"
 )
 
 func isPresent(str string, list []string) bool {
@@ -21,13 +23,13 @@ func stringList(list []interface{}) []string {
 	return sList
 }
 
+var _ DestinationFilterInterface = DesiredHookFilter{}
+
 // DesiredHookFilter - Filter destination if given event has desired destination
-type DesiredHookFilter struct {
-	DestinationFilterInterface
-}
+type DesiredHookFilter struct{}
 
 // Run - Get desired hooks in control and filter out exclusion
-func (f DesiredHookFilter) Run(e models.IncomingEvent, d models.Destination) (bool, error) {
+func (f DesiredHookFilter) Run(ctx context.Context, e models.IncomingEvent, d models.Destination) (bool, error) {
 	hook := d.Config.GetName()
 	list := e.Control["desired_hooks"]
 	switch list.(type) {
@@ -42,6 +44,6 @@ func (f DesiredHookFilter) Run(e models.IncomingEvent, d models.Destination) (bo
 }
 
 // Applicable - Check if desired hooks is present
-func (f DesiredHookFilter) Applicable(e models.IncomingEvent, d models.Destination) bool {
+func (f DesiredHookFilter) Applicable(ctx context.Context, e models.IncomingEvent, d models.Destination) bool {
 	return e.Control["desired_hooks"] != nil
 }

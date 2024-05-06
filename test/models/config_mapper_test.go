@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/shoplineapp/captin/models"
-	interfaces "github.com/shoplineapp/captin/interfaces"
+	. "github.com/shoplineapp/captin/v2/models"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
 )
 
 func setup() []interfaces.ConfigurationInterface {

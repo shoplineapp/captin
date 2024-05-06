@@ -1,14 +1,15 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
 	"time"
 
-	core "github.com/shoplineapp/captin/core"
-	models "github.com/shoplineapp/captin/models"
+	core "github.com/shoplineapp/captin/v2/core"
+	models "github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,7 +32,7 @@ func main() {
 
 	go func() {
 		for enabled && captin.IsRunning() != true {
-			captin.Execute(models.IncomingEvent{
+			captin.Execute(context.Background(), models.IncomingEvent{
 				Key:        "product.update",
 				Source:     "core",
 				Payload:    map[string]interface{}{"field1": 1},

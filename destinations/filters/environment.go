@@ -1,18 +1,20 @@
 package destination_filters
 
 import (
-	models "github.com/shoplineapp/captin/models"
+	"context"
+
+	models "github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
 )
 
 var eLogger = log.WithFields(log.Fields{"class": "EnvironmentFilter"})
 
-type EnvironmentFilter struct {
-	DestinationFilterInterface
-}
+var _ DestinationFilterInterface = EnvironmentFilter{}
+
+type EnvironmentFilter struct{}
 
 // Destination needs to be enabled by ENV Variable {Config Name}_ENABLED, e.g, WAPOS_SYNC_ENABLED
-func (f EnvironmentFilter) Run(e models.IncomingEvent, d models.Destination) (bool, error) {
+func (f EnvironmentFilter) Run(ctx context.Context, e models.IncomingEvent, d models.Destination) (bool, error) {
 	variableName, value := d.Config.GetByEnv("enabled")
 	isEnabled := value != "false"
 
@@ -23,6 +25,6 @@ func (f EnvironmentFilter) Run(e models.IncomingEvent, d models.Destination) (bo
 	return isEnabled, nil
 }
 
-func (f EnvironmentFilter) Applicable(e models.IncomingEvent, d models.Destination) bool {
+func (f EnvironmentFilter) Applicable(ctx context.Context, e models.IncomingEvent, d models.Destination) bool {
 	return true
 }

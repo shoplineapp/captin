@@ -1,6 +1,7 @@
 package senders
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -10,10 +11,13 @@ import (
 
 	beanstalk "github.com/beanstalkd/go-beanstalk"
 	statsd "github.com/joeycumines/statsd"
-	captin_errors "github.com/shoplineapp/captin/errors"
-	interfaces "github.com/shoplineapp/captin/interfaces"
-	models "github.com/shoplineapp/captin/models"
+	captin_errors "github.com/shoplineapp/captin/v2/errors"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
+	"github.com/shoplineapp/captin/v2/internal/helpers"
+	models "github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 var bLogger = log.WithFields(log.Fields{"class": "BeanstalkdSender"})
@@ -22,14 +26,24 @@ var bLogger = log.WithFields(log.Fields{"class": "BeanstalkdSender"})
 // Source: https://github.com/beanstalkd/go-beanstalk/blob/master/name.go
 const allowedCharacters = `^[A-Za-z0-9\\\-\+\/\;\.\$\_\(\)]{1,199}$`
 
+var _ interfaces.EventSenderInterface = &BeanstalkdSender{}
+
 // BeanstalkdSender - Send Event to beanstalkd
 type BeanstalkdSender struct {
-	interfaces.EventSenderInterface
 	StatsdClient *statsd.Client
 }
 
 // SendEvent - #BeanstalkdSender SendEvent
-func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) error {
+func (c *BeanstalkdSender) SendEvent(ctx context.Context, ev interfaces.IncomingEventInterface, dv interfaces.DestinationInterface) (err error) {
+	ctx, span := helpers.Tracer().Start(ctx, "captin.BeanstalkdSender.SendEvent")
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+
 	e := ev.(models.IncomingEvent)
 	d := dv.(models.Destination)
 
@@ -68,6 +82,7 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 
 		//return &captin_errors.UnretryableError{Msg: "beanstalkd_host is invalid", Event: e}
 	}
+	span.SetAttributes(attribute.String("beanstalkdHost", beanstalkdHostStr))
 
 	conn, err := beanstalk.Dial("tcp", beanstalkdHostStr)
 	if err != nil {
@@ -79,6 +94,7 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		}
 		return err
 	}
+	defer conn.Close()
 
 	beanstalkdQueueName := e.Control["queue_name"]
 	if beanstalkdQueueName == nil || beanstalkdQueueName == "" {
@@ -94,6 +110,7 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 	}
 
 	beanstalkdQueueNameStr := beanstalkdQueueName.(string)
+	span.SetAttributes(attribute.String("beanstalkdQueueName", beanstalkdQueueNameStr))
 	isValidBeanstalkdQueueNameStr, err := regexp.MatchString(allowedCharacters, beanstalkdQueueNameStr)
 	if err != nil || !isValidBeanstalkdQueueNameStr {
 		bLogger.WithFields(log.Fields{
@@ -109,6 +126,7 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 
 	conn.Tube = beanstalk.Tube{Conn: conn, Name: beanstalkdQueueNameStr}
 
+	e.DistributedTracingInfo.InjectContext(ctx)
 	jobBody, err := json.Marshal(e.Payload)
 	if err != nil {
 		bLogger.WithFields(log.Fields{
@@ -152,7 +170,6 @@ func (c *BeanstalkdSender) SendEvent(ev interfaces.IncomingEventInterface, dv in
 		"jobBody": string(jobBody),
 	}).Info("Enqueue job.")
 
-	defer conn.Close()
 	return nil
 }
 

@@ -1,18 +1,19 @@
 package interfaces
 
 import (
+	"context"
 	"time"
 )
 
 // CaptinInterface - Captin Interface
 type CaptinInterface interface {
-	Execute(e IncomingEventInterface) (bool, []ErrorInterface)
+	Execute(ctx context.Context, e IncomingEventInterface) (bool, []ErrorInterface)
 	IsRunning() bool
 }
 
 // EventSenderInterface - Event Sender Interface
 type EventSenderInterface interface {
-	SendEvent(e IncomingEventInterface, d DestinationInterface) error
+	SendEvent(ctx context.Context, e IncomingEventInterface, d DestinationInterface) error
 }
 
 // ThrottleInterface - interface for a throttle object
@@ -23,9 +24,9 @@ type EventSenderInterface interface {
 // Throttle: 			  t     t2
 type ThrottleInterface interface {
 	// CanTrigger - Check if can trigger
-	CanTrigger(id string, period time.Duration) (bool, time.Duration, error)
+	CanTrigger(ctx context.Context, id string, period time.Duration) (canTrigger bool, ttl time.Duration, err error)
 }
 
 type ErrorHandlerInterface interface {
-	Exec(e ErrorInterface)
+	Exec(ctx context.Context, e ErrorInterface)
 }

@@ -1,17 +1,19 @@
 package throttles
 
 import (
+	"context"
 	"time"
 
-	interfaces "github.com/shoplineapp/captin/interfaces"
+	interfaces "github.com/shoplineapp/captin/v2/interfaces"
 	log "github.com/sirupsen/logrus"
 )
 
 var tLogger = log.WithFields(log.Fields{"class": "Throttler"})
 
+var _ interfaces.ThrottleInterface = &Throttler{}
+
 // Throttler - Event Throttler
 type Throttler struct {
-	interfaces.ThrottleInterface
 	store interfaces.StoreInterface
 }
 
@@ -22,14 +24,13 @@ func NewThrottler(store interfaces.StoreInterface) *Throttler {
 	}
 }
 
-// CanTrigger - Check if can trigger
-func (t *Throttler) CanTrigger(id string, period time.Duration) (bool, time.Duration, error) {
+func (t *Throttler) CanTrigger(ctx context.Context, id string, period time.Duration) (bool, time.Duration, error) {
 	// ignore throttle if no period is given
 	if period == time.Duration(0) {
 		return true, time.Duration(0), nil
 	}
 
-	val, ok, duration, err := t.store.Get(id)
+	val, ok, duration, err := t.store.Get(ctx, id)
 
 	if err != nil {
 		return true, time.Duration(0), err
@@ -37,7 +38,7 @@ func (t *Throttler) CanTrigger(id string, period time.Duration) (bool, time.Dura
 	tLogger.WithFields(log.Fields{"value": val}).Debug("Check throttle value on CanTrigger")
 	if !ok {
 		tLogger.WithFields(log.Fields{"period": period}).Debug("Throttle value not set, creating...")
-		t.store.Set(id, "1", period)
+		t.store.Set(ctx, id, "1", period)
 		return true, time.Duration(0), nil
 	}
 
