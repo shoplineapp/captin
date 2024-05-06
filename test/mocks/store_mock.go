@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shoplineapp/captin/interfaces"
-	"github.com/shoplineapp/captin/models"
+	"github.com/shoplineapp/captin/v2/interfaces"
+	"github.com/shoplineapp/captin/v2/models"
 	"github.com/stretchr/testify/mock"
 )
 
+var _ interfaces.StoreInterface = &StoreMock{}
+
 // StoreMock - Mock of StoreInterface
 type StoreMock struct {
-	interfaces.StoreInterface
 	mock.Mock
 }
 

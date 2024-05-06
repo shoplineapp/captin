@@ -6,9 +6,9 @@ import (
 	models "github.com/shoplineapp/captin/v2/models"
 )
 
-type SourceFilter struct {
-	DestinationFilterInterface
-}
+var _ DestinationFilterInterface = SourceFilter{}
+
+type SourceFilter struct{}
 
 func (f SourceFilter) Run(ctx context.Context, e models.IncomingEvent, d models.Destination) (bool, error) {
 	return e.Source != d.Config.GetSource(), nil

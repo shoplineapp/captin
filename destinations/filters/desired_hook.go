@@ -23,10 +23,10 @@ func stringList(list []interface{}) []string {
 	return sList
 }
 
+var _ DestinationFilterInterface = DesiredHookFilter{}
+
 // DesiredHookFilter - Filter destination if given event has desired destination
-type DesiredHookFilter struct {
-	DestinationFilterInterface
-}
+type DesiredHookFilter struct{}
 
 // Run - Get desired hooks in control and filter out exclusion
 func (f DesiredHookFilter) Run(ctx context.Context, e models.IncomingEvent, d models.Destination) (bool, error) {

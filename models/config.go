@@ -11,10 +11,10 @@ import (
 	"github.com/shoplineapp/captin/v2/interfaces"
 )
 
+var _ interfaces.ConfigurationInterface = &Configuration{}
+
 // Configuration - Webhook Configuration Model
 type Configuration struct {
-	interfaces.ConfigurationInterface
-
 	ConfigID                 string            `json:"id"`
 	CallbackURL              string            `json:"callback_url"`
 	Validate                 string            `json:"validate"`

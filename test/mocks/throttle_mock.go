@@ -4,13 +4,14 @@ import (
 	"context"
 	"time"
 
-	"github.com/shoplineapp/captin/interfaces"
+	"github.com/shoplineapp/captin/v2/interfaces"
 	"github.com/stretchr/testify/mock"
 )
 
+var _ interfaces.ThrottleInterface = &ThrottleMock{}
+
 // ThrottleMock - Mock ThrottleInterface
 type ThrottleMock struct {
-	interfaces.ThrottleInterface
 	mock.Mock
 }
 

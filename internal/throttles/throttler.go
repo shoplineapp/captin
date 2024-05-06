@@ -10,9 +10,10 @@ import (
 
 var tLogger = log.WithFields(log.Fields{"class": "Throttler"})
 
+var _ interfaces.ThrottleInterface = &Throttler{}
+
 // Throttler - Event Throttler
 type Throttler struct {
-	interfaces.ThrottleInterface
 	store interfaces.StoreInterface
 }
 
