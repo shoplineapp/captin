@@ -18,6 +18,9 @@ import (
 	"github.com/shoplineapp/captin/v2/internal/helpers"
 	models "github.com/shoplineapp/captin/v2/models"
 	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var dLogger = log.WithFields(log.Fields{"class": "Dispatcher"})
@@ -114,6 +117,15 @@ func (d *Dispatcher) Dispatch(
 	}
 	d.dispatchCalled.Store(true)
 	responses := make(chan int, len(d.destinations))
+	ctx = e.DistributedTracingInfo.PropagateIntoContext(ctx)
+	ctx, span := helpers.Tracer().Start(ctx, "captin.Dispatch", trace.WithAttributes(
+		attribute.String("event_key", e.Key),
+		attribute.Bool("dispatch_already_called", alreadyCalled),
+		attribute.Int("raw_destination_count", len(d.destinations)),
+	))
+	defer span.End()
+	// propagate the trace context into the event, for both downstream receivers, and also later workers if the event is delayed or throttled
+	e.DistributedTracingInfo.InjectContext(ctx)
 	for _, destination := range d.destinations {
 		config := destination.Config
 		canTrigger, timeRemain, err := throttler.CanTrigger(ctx, getEventKey(ctx, store, e, destination), config.GetThrottleValue())
@@ -182,11 +194,23 @@ func (d *Dispatcher) customizeEvent(ctx context.Context, e models.IncomingEvent,
 func (d *Dispatcher) injectThrottledPayloads(ctx context.Context, e models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface) interfaces.IncomingEventInterface {
 	if destination.Config.GetKeepThrottledPayloads() {
 		queueKey := getEventThrottledPayloadsKey(ctx, store, e, destination)
-		payloadStrings, _, _, _ := store.GetQueue(ctx, queueKey)
-		store.Remove(ctx, queueKey)
+		payloadStrings, _, _, err := store.GetQueue(ctx, queueKey)
+		if err != nil {
+			dLogger.WithFields(log.Fields{"event": e, "error": err}).Error("Error occurred when getting queue for throttled payloads")
+			// TODO: handle the error properly
+		}
+		_, err = store.Remove(ctx, queueKey)
+		if err != nil {
+			dLogger.WithFields(log.Fields{"event": e, "error": err}).Error("Error occurred when removing queue key for throttled payloads")
+			// TODO: handle the error properly
+		}
 		for _, payloadStr := range payloadStrings {
 			payload := map[string]interface{}{}
-			json.Unmarshal([]byte(payloadStr), &payload)
+			err := json.Unmarshal([]byte(payloadStr), &payload)
+			if err != nil {
+				dLogger.WithFields(log.Fields{"event": e, "error": err}).Error("Error occurred when unmarshalling throttled payload")
+				// TODO: handle the error properly
+			}
 			e.ThrottledPayloads = append(e.ThrottledPayloads, payload)
 		}
 	}
@@ -197,11 +221,23 @@ func (d *Dispatcher) injectThrottledPayloads(ctx context.Context, e models.Incom
 func (d *Dispatcher) injectThrottledDocuments(ctx context.Context, e models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface) interfaces.IncomingEventInterface {
 	if destination.Config.GetIncludeDocument() && destination.Config.GetKeepThrottledDocuments() {
 		queueKey := getEventThrottledDocumentsKey(ctx, store, e, destination)
-		documentStrings, _, _, _ := store.GetQueue(ctx, queueKey)
-		store.Remove(ctx, queueKey)
+		documentStrings, _, _, err := store.GetQueue(ctx, queueKey)
+		if err != nil {
+			dLogger.WithFields(log.Fields{"event": e, "error": err}).Warn("Error occurred when getting queue for throttled documents")
+			// TODO: handle the error properly
+		}
+		_, err = store.Remove(ctx, queueKey)
+		if err != nil {
+			dLogger.WithFields(log.Fields{"event": e, "error": err}).Warn("Error occurred when removing queue key for throttled documents")
+			// TODO: handle the error properly
+		}
 		for _, documentStr := range documentStrings {
 			document := map[string]interface{}{}
-			json.Unmarshal([]byte(documentStr), &document)
+			err := json.Unmarshal([]byte(documentStr), &document)
+			if err != nil {
+				dLogger.WithFields(log.Fields{"event": e, "error": err}).Warn("Error occurred when unmarshalling throttled document")
+				// TODO: handle the error properly
+			}
 			e.ThrottledDocuments = append(e.ThrottledDocuments, document)
 		}
 	}
@@ -243,6 +279,7 @@ func (d *Dispatcher) customizePayload(ctx context.Context, e models.IncomingEven
 }
 
 func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingEvent, timeRemain time.Duration, dest models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
+	ctx, span := helpers.Tracer().Start(ctx, "captin.processDelayedEvent")
 	defer func() {
 		if err := recover(); err != nil {
 			err := &captin_errors.DispatcherError{
@@ -250,8 +287,11 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 				Destination: dest,
 				Event:       e,
 			}
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Msg)
 			d.OnError(ctx, e, err)
 		}
+		span.End()
 	}()
 
 	// Check if store have payload
@@ -264,7 +304,12 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 	var storedEvent models.IncomingEvent
 	if dataExists {
 		storedEvent = models.IncomingEvent{}
-		json.Unmarshal([]byte(storedData), &storedEvent)
+		err := json.Unmarshal([]byte(storedData), &storedEvent)
+		if err != nil {
+			dLogger.WithFields(log.Fields{"event": e, "error": err}).Warn("Error occurred when unmarshalling stored event when processing delayed event")
+			span.RecordError(err)
+			// TODO: handle the error properly
+		}
 	}
 
 	if dataExists && getControlTimestamp(storedEvent, 0) > getControlTimestamp(e, uint64(time.Now().UnixNano())) {
@@ -274,6 +319,7 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 			"event":        e,
 			"eventDataKey": "dataKey",
 		}).Debug("Skipping update on event data")
+		span.AddEvent("Skipping update on event data")
 		return
 	}
 
@@ -291,7 +337,13 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 			"enqueuePayload": jsonString,
 			"ttl":            ttl,
 		}).Debug("Storing throttled payload")
-		store.Enqueue(ctx, queueKey, string(jsonString), ttl)
+		span.AddEvent("Storing throttled payload", trace.WithAttributes(attribute.String("queueKey", queueKey), attribute.String("throttleValue", ttl.String())))
+		_, err := store.Enqueue(ctx, queueKey, string(jsonString), ttl)
+		if err != nil {
+			dLogger.WithFields(log.Fields{"event": e, "error": err, "queueKey": queueKey}).Warn("Error occurred when enqueuing customized payload when processing delayed event")
+			span.RecordError(err)
+			// TODO: handle the error properly
+		}
 	}
 
 	if dest.Config.GetIncludeDocument() && dest.Config.GetKeepThrottledDocuments() {
@@ -308,7 +360,13 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 			"enqueueDocument": jsonString,
 			"ttl":             ttl,
 		}).Debug("Storing throttled document")
-		store.Enqueue(ctx, queueKey, string(jsonString), ttl)
+		span.AddEvent("Storing throttled document", trace.WithAttributes(attribute.String("queueKey", queueKey), attribute.String("throttleValue", ttl.String())))
+		_, err := store.Enqueue(ctx, queueKey, string(jsonString), ttl)
+		if err != nil {
+			dLogger.WithFields(log.Fields{"event": e, "error": err, "queueKey": queueKey}).Warn("Error occurred when enqueuing customized document when processing delayed event")
+			span.RecordError(err)
+			// TODO: handle the error properly
+		}
 	}
 
 	jsonString, jsonErr := e.ToJson()
@@ -331,20 +389,40 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 		}
 
 		// Schedule send event later
+		span.SetAttributes(attribute.Int("delay_milliseconds", int(timeRemain.Milliseconds())))
 		dispatcher.TrackAfterFuncJob(timeRemain, func() {
+			ctx, span := helpers.Tracer().Start(ctx, "captin.processDelayedEvent.AfterFunc")
+			defer span.End()
 			dLogger.WithFields(log.Fields{"key": dataKey}).Debug("After event callback")
-			payload, exists, _, _ := store.Get(dataKey)
+			payload, exists, _, err := store.Get(ctx, dataKey)
+			if err != nil {
+				dLogger.WithFields(log.Fields{"event": e, "error": err, "dataKey": dataKey}).Warn("Error occurred when getting payload for delayed event")
+				span.RecordError(err)
+				// TODO: handle the error properly
+			}
 			// Key might be deleted by another worker, resulting in data not found
 			if !exists {
 				dLogger.WithFields(log.Fields{"key": dataKey}).Debug("Event data not found")
 				err := &captin_errors.UnretryableError{Msg: "Event data not found", Event: e, Destination: dest}
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Msg)
 				d.OnError(ctx, models.IncomingEvent{}, err)
 				return
 			}
 			event := models.IncomingEvent{}
-			json.Unmarshal([]byte(payload), &event)
+			err = json.Unmarshal([]byte(payload), &event)
+			if err != nil {
+				dLogger.WithFields(log.Fields{"key": dataKey}).Warn("Error occurred when unmarshalling event data for delayed event")
+				span.RecordError(err)
+				// TODO: handle the error properly
+			}
 			d.sendEvent(ctx, event, dest, store, documentStore)
-			store.Remove(ctx, dataKey)
+			_, err = store.Remove(ctx, dataKey)
+			if err != nil {
+				dLogger.WithFields(log.Fields{"key": dataKey}).Warn("Error occurred when removing event data from store for delayed event")
+				span.RecordError(err)
+				// TODO: handle the error properly
+			}
 		})
 	}
 }
@@ -390,6 +468,11 @@ func getEventThrottledDocumentsKey(ctx context.Context, s interfaces.StoreInterf
 	return s.DataKey(ctx, e, d, "", "-throttled_documents")
 }
 
+// TODO:
+// This method and subsequential calls should be extracted as a "sub-Dispatcher" dedicated for one destination, so that
+// (1) the logic are clearer
+// (2) we can keep destination-specific state in the sub-Dispatcher instead of passing everything as arguments again and again
+// (3) we can keep context and span for distributed tracing
 func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, destination models.Destination, store interfaces.StoreInterface, documentStore interfaces.DocumentStoreInterface) {
 	config := destination.Config
 	callbackLogger := dLogger.WithFields(log.Fields{
@@ -399,6 +482,13 @@ func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, de
 		"callback_url":   destination.GetCallbackURL(),
 		"document_store": destination.GetDocumentStore(),
 	})
+	// derive a new context and new span for this destination
+	ctx, span := helpers.Tracer().Start(ctx, "captin.sendEvent", trace.WithAttributes(
+		attribute.String("destination", config.GetName()),
+		attribute.String("action", evt.Key),
+		attribute.String("callback_url", destination.GetCallbackURL()),
+		attribute.String("document_store", destination.GetDocumentStore()),
+	))
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -409,8 +499,10 @@ func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, de
 				Destination: destination,
 				Event:       evt,
 			})
+			span.RecordError(err.(error))
+			span.SetStatus(codes.Error, errMsg)
+			span.End()
 		}
-		return
 	}()
 
 	callbackLogger.Debug("Preprocess payload and document")
@@ -435,6 +527,7 @@ func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, de
 	if senderKey == "" {
 		senderKey = "http"
 	}
+	span.SetAttributes(attribute.String("sender", senderKey))
 	sender, senderExists := d.senderMapping[senderKey]
 	if senderExists == false {
 		panic(&captin_errors.DispatcherError{
@@ -446,6 +539,7 @@ func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, de
 
 	// Wrap event sender and error handling as closure for reusing in delayer
 	_sendEvent := func() {
+		defer span.End()
 		defer func() {
 			if err := recover(); err != nil {
 				var newErr error
@@ -461,10 +555,15 @@ func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, de
 					}
 				}
 				d.OnError(ctx, evt, newErr)
+				span.RecordError(newErr)
+				span.SetStatus(codes.Error, newErr.Error())
 			}
 		}()
+		span.AddEvent("_sendEvent")
 		// Deep clone a new instance to prevent concurrent iteration and write on json.Marshal
 		event := deepcopy.Copy(evt).(models.IncomingEvent)
+		// propagate the new trace context into the event
+		event.DistributedTracingInfo.InjectContext(ctx)
 		err := sender.SendEvent(ctx, event, destination)
 		if err != nil {
 			panic(err)
@@ -473,6 +572,7 @@ func (d *Dispatcher) sendEvent(ctx context.Context, evt models.IncomingEvent, de
 	}
 
 	if destination.RequireDelay(evt) {
+		span.SetAttributes(attribute.Bool("RequireDelay", true))
 		// Sending message with delay in goroutine, no error will be caught
 		callbackLogger.Info(fmt.Sprintf("Event requires delay"))
 		if d.delayer != nil {

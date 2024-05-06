@@ -6,10 +6,10 @@ import (
 	interfaces "github.com/shoplineapp/captin/v2/interfaces"
 )
 
+var _ interfaces.DocumentStoreInterface = NullDocumentStore{}
+
 // NullDocumentStore - Null data store
-type NullDocumentStore struct {
-  interfaces.DocumentStoreInterface
-}
+type NullDocumentStore struct{}
 
 // NewNullDocumentStore - Create new NullDocumentStore
 func NewNullDocumentStore() *NullDocumentStore {

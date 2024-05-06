@@ -12,8 +12,9 @@ import (
 
 var vLogger = log.WithFields(log.Fields{"class": "ValidateFilter"})
 
+var _ DestinationFilterInterface = ValidateFilter{}
+
 type ValidateFilter struct {
-	DestinationFilterInterface
 }
 
 func (f ValidateFilter) Run(ctx context.Context, e models.IncomingEvent, d models.Destination) (bool, error) {

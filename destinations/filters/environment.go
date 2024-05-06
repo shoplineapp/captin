@@ -9,9 +9,9 @@ import (
 
 var eLogger = log.WithFields(log.Fields{"class": "EnvironmentFilter"})
 
-type EnvironmentFilter struct {
-	DestinationFilterInterface
-}
+var _ DestinationFilterInterface = EnvironmentFilter{}
+
+type EnvironmentFilter struct{}
 
 // Destination needs to be enabled by ENV Variable {Config Name}_ENABLED, e.g, WAPOS_SYNC_ENABLED
 func (f EnvironmentFilter) Run(ctx context.Context, e models.IncomingEvent, d models.Destination) (bool, error) {

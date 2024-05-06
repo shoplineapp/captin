@@ -8,9 +8,10 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+var _ interfaces.DocumentStoreInterface = &DocumentStoreMock{}
+
 // DocumentStoreMock - Mock of DocumentStoreInterface
 type DocumentStoreMock struct {
-	interfaces.DocumentStoreInterface
 	mock.Mock
 }
 

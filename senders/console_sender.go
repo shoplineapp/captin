@@ -10,6 +10,8 @@ import (
 
 var cLogger = log.WithFields(log.Fields{"class": "ConsoleEventSender"})
 
+var _ interfaces.EventSenderInterface = &ConsoleEventSender{}
+
 // ConsoleEventSender - Present Event in console
 type ConsoleEventSender struct{}
 
