@@ -48,11 +48,12 @@ func NewIncomingEvent(data []byte) IncomingEvent {
 
 func (e IncomingEvent) GetTraceInfo() map[string]interface{} {
 	return map[string]interface{}{
-		"trace_id": e.TraceId,
-		"key":      e.Key,
-		"source":   e.Source,
-		"type":     e.TargetType,
-		"id":       e.TargetId,
+		"trace_id":          e.DistributedTracingInfo.GetTraceID(),
+		"internal_trace_id": e.TraceId,
+		"key":               e.Key,
+		"source":            e.Source,
+		"type":              e.TargetType,
+		"id":                e.TargetId,
 	}
 }
 
