@@ -111,8 +111,10 @@ func (d *Dispatcher) Dispatch(
 	documentStoreMappings map[string]interfaces.DocumentStoreInterface,
 ) interfaces.ErrorInterface {
 	e := event.(models.IncomingEvent)
-	alreadyCalled := d.dispatchCalled.CompareAndSwap(false, true)
-	if alreadyCalled {
+	// CompareAndSwap returns if the original value is false
+	// so if it returns `false`, it means that the original value is `true`, i.e. it has been called before
+	isFirstTimeCall := d.dispatchCalled.CompareAndSwap(false, true)
+	if !isFirstTimeCall {
 		dLogger.WithField("event", e).Warn("Triggering dispatch more than once")
 	}
 	d.dispatchCalled.Store(true)
@@ -120,7 +122,7 @@ func (d *Dispatcher) Dispatch(
 	ctx = e.DistributedTracingInfo.PropagateIntoContext(ctx)
 	ctx, span := helpers.Tracer().Start(ctx, "captin.Dispatch", trace.WithAttributes(
 		attribute.String("event_key", e.Key),
-		attribute.Bool("dispatch_already_called", alreadyCalled),
+		attribute.Bool("is_first_time_call_dispatch", isFirstTimeCall),
 		attribute.Int("raw_destination_count", len(d.destinations)),
 	))
 	defer span.End()
