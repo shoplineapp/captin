@@ -108,12 +108,12 @@ func TestIsValid(t *testing.T) {
 func TestMarshalJSON(t *testing.T) {
 	val, err := sampleIncomingEvent.MarshalJSON()
 	require.NoError(t, err)
-	assert.Equal(t, `{"control":{"host":"host","ip_addresses":"ip_addresses","ts":99999999999999},"id":"xxxxx","key":"product.update","source":"core","trace_id":"11111111-2222-3333-4444-555555555555","type":"product"}`, string(val))
+	assert.Equal(t, `{"control":{"host":"host","ip_addresses":"ip_addresses","ts":99999999999999},"id":"xxxxx","internal_trace_id":"11111111-2222-3333-4444-555555555555","key":"product.update","source":"core","trace_id":"11111111111111111111111111111111","type":"product"}`, string(val))
 }
 
 func TestString(t *testing.T) {
 	val := sampleIncomingEvent.String()
-	assert.Equal(t, `{"control":{"host":"host","ip_addresses":"ip_addresses","ts":99999999999999},"id":"xxxxx","key":"product.update","source":"core","trace_id":"11111111-2222-3333-4444-555555555555","type":"product"}`, string(val))
+	assert.Equal(t, `{"control":{"host":"host","ip_addresses":"ip_addresses","ts":99999999999999},"id":"xxxxx","internal_trace_id":"11111111-2222-3333-4444-555555555555","key":"product.update","source":"core","trace_id":"11111111111111111111111111111111","type":"product"}`, string(val))
 }
 
 func TestToMap(t *testing.T) {
