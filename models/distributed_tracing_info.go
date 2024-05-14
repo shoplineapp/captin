@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"encoding/json"
+	"regexp"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
@@ -84,4 +85,19 @@ func (d *DistributedTracingInfo) ClearContext() *DistributedTracingInfo {
 // GetTraceParent returns the traceparent header value, which provides a convenient way to get a representation of the current trace context
 func (d *DistributedTracingInfo) GetTraceParent() string {
 	return d.Get("traceparent")
+}
+
+// traceIdRegexp is a regular expression to extract the trace ID from the traceparent header.
+// The trace ID is a 32-character hexadecimal number, which will be captured by the first group of the regexp match.
+// Reference: https://www.w3.org/TR/trace-context/#traceparent-header
+var traceIdRegexp = regexp.MustCompile(`^\d\d-([a-f0-9]{32})-`)
+
+// GetTraceID tries to extract the trace ID from the traceparent header. If it's not found, it returns an empty string.
+func (d *DistributedTracingInfo) GetTraceID() string {
+	traceParent := d.GetTraceParent()
+	matches := traceIdRegexp.FindStringSubmatch(traceParent)
+	if len(matches) < 2 {
+		return ""
+	}
+	return matches[1]
 }
