@@ -10,28 +10,29 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
-	aws "github.com/aws/aws-sdk-go/aws"
-	aws_credentials "github.com/aws/aws-sdk-go/aws/credentials"
-	aws_session "github.com/aws/aws-sdk-go/aws/session"
-	aws_sqs "github.com/aws/aws-sdk-go/service/sqs"
-	aws_sqsiface "github.com/aws/aws-sdk-go/service/sqs/sqsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	aws_credentials "github.com/aws/aws-sdk-go-v2/credentials"
+	aws_sqs "github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
 var sLogger = log.WithFields(log.Fields{"class": "SqsSender"})
+
+type SqsApiInterface interface {
+	SendMessage(ctx context.Context, input *aws_sqs.SendMessageInput, _ ...func(*aws_sqs.Options)) (*aws_sqs.SendMessageOutput, error)
+}
 
 var _ interfaces.EventSenderInterface = &SqsSender{}
 
 // SqsSender - Send Event to AWS SQS
 type SqsSender struct {
-	DefaultClient        aws_sqsiface.SQSAPI
-	DestinationClientMap map[string]aws_sqsiface.SQSAPI
+	DefaultClient        SqsApiInterface
+	DestinationClientMap map[string]SqsApiInterface
 }
 
 func NewSqsSender(defaultAwsConfig aws.Config) *SqsSender {
-	defaultSession := aws_session.Must(aws_session.NewSession(&defaultAwsConfig))
 	return &SqsSender{
-		DefaultClient:        aws_sqs.New(defaultSession),
-		DestinationClientMap: map[string]aws_sqsiface.SQSAPI{},
+		DefaultClient:        aws_sqs.NewFromConfig(defaultAwsConfig),
+		DestinationClientMap: make(map[string]SqsApiInterface),
 	}
 }
 
@@ -60,7 +61,7 @@ func (s *SqsSender) SendEvent(ctx context.Context, ev interfaces.IncomingEventIn
 		return jsonErr
 	}
 
-	_, err = s.GetClient(dv).SendMessageWithContext(ctx, &aws_sqs.SendMessageInput{
+	_, err = s.GetClient(dv).SendMessage(ctx, &aws_sqs.SendMessageInput{
 		MessageBody: aws.String(string(payload)),
 		QueueUrl:    &queueURL,
 	})
@@ -72,7 +73,7 @@ func (s *SqsSender) SendEvent(ctx context.Context, ev interfaces.IncomingEventIn
 	return err
 }
 
-func (s *SqsSender) GetClient(dv interfaces.DestinationInterface) aws_sqsiface.SQSAPI {
+func (s *SqsSender) GetClient(dv interfaces.DestinationInterface) SqsApiInterface {
 	d := dv.(models.Destination)
 	destName := d.Config.GetName()
 
@@ -82,19 +83,18 @@ func (s *SqsSender) GetClient(dv interfaces.DestinationInterface) aws_sqsiface.S
 			awsConfig := aws.Config{}
 
 			if dv.GetSqsSenderConfig("AWS_ENDPOINT") != "" {
-				awsConfig.Endpoint = aws.String(dv.GetSqsSenderConfig("AWS_ENDPOINT"))
+				awsConfig.BaseEndpoint = aws.String(dv.GetSqsSenderConfig("AWS_ENDPOINT"))
 			}
 
 			if dv.GetSqsSenderConfig("AWS_REGION") != "" {
-				awsConfig.Region = aws.String(dv.GetSqsSenderConfig("AWS_REGION"))
+				awsConfig.Region = dv.GetSqsSenderConfig("AWS_REGION")
 			}
 
 			if dv.GetSqsSenderConfig("AWS_ACCESS_KEY_ID") != "" && dv.GetSqsSenderConfig("AWS_SECRET_ACCESS_KEY") != "" {
-				awsConfig.Credentials = aws_credentials.NewStaticCredentials(dv.GetSqsSenderConfig("AWS_ACCESS_KEY_ID"), dv.GetSqsSenderConfig("AWS_SECRET_ACCESS_KEY"), "")
+				awsConfig.Credentials = aws_credentials.NewStaticCredentialsProvider(dv.GetSqsSenderConfig("AWS_ACCESS_KEY_ID"), dv.GetSqsSenderConfig("AWS_SECRET_ACCESS_KEY"), "")
 			}
 
-			session := aws_session.Must(aws_session.NewSession(&awsConfig))
-			s.DestinationClientMap[destName] = aws_sqs.New(session)
+			s.DestinationClientMap[destName] = aws_sqs.NewFromConfig(awsConfig)
 		}
 
 		return s.DestinationClientMap[destName]
