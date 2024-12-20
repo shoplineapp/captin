@@ -378,6 +378,7 @@ func (d *Dispatcher) processDelayedEvent(ctx context.Context, e models.IncomingE
 
 	if dataExists {
 		// Update Value
+		span.AddEvent("Replacing throttled document delayed event", trace.WithAttributes(attribute.String("data_key", dataKey), attribute.String("trace_id", e.DistributedTracingInfo.GetTraceID())))
 		_, updateErr := store.Update(ctx, dataKey, string(jsonString))
 		if updateErr != nil {
 			panic(updateErr)
